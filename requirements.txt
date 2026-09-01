@@ -4,3 +4,4 @@ pyodbc==5.3.0
 django-environ==0.14.0
 django-crispy-forms==2.7
 crispy-bootstrap5==2026.3
+Pillow==12.3.0
