@@ -1,14 +1,238 @@
 {% extends 'base.html' %}
 
-{% block title %}POS - CoffeeStock{% endblock %}
+{% block title %}Punto de venta - CoffeeStock{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <h1>Punto de venta</h1>
-  <p class="text-muted">Próximamente.</p>
-  <form method="post" action="{% url 'core:logout' %}">
-    {% csrf_token %}
-    <button type="submit" class="btn btn-outline-secondary">Cerrar sesión</button>
-  </form>
+<div class="d-flex flex-column" style="height: 100vh;">
+  <header class="d-flex justify-content-between align-items-center bg-dark text-white px-3 py-2">
+    <h1 class="h5 mb-0">CoffeeStock POS</h1>
+    <div class="d-flex align-items-center gap-3">
+      <span>{{ request.user.get_username }}</span>
+      <form method="post" action="{% url 'core:logout' %}" class="mb-0">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-light">Cerrar sesión</button>
+      </form>
+    </div>
+  </header>
+
+  <div id="pos-alert-container" class="px-3 pt-2"></div>
+
+  <div class="flex-grow-1 d-flex overflow-hidden">
+    <div class="flex-grow-1 overflow-auto p-3" id="productos-panel">
+      {% regroup productos by categoria as categoria_list %}
+      {% for categoria in categoria_list %}
+        <h2 class="h5 mt-2">{{ categoria.list.0.get_categoria_display }}</h2>
+        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
+          {% for producto in categoria.list %}
+            <div class="col">
+              <button
+                type="button"
+                class="btn btn-outline-secondary w-100 h-100 p-2 producto-card text-start"
+                data-producto-id="{{ producto.id }}"
+                data-producto-nombre="{{ producto.nombre }}"
+                data-producto-precio="{{ producto.precio_venta }}"
+              >
+                {% if producto.imagen %}
+                  <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="w-100 rounded mb-2" style="height: 120px; object-fit: cover;">
+                {% else %}
+                  <div class="w-100 rounded mb-2 d-flex align-items-center justify-content-center bg-light" style="height: 120px; font-size: 3rem;">☕</div>
+                {% endif %}
+                <div class="fw-bold">{{ producto.nombre }}</div>
+                <div class="text-muted">${{ producto.precio_venta }}</div>
+              </button>
+            </div>
+          {% endfor %}
+        </div>
+      {% empty %}
+        <p class="text-muted">No hay productos activos disponibles.</p>
+      {% endfor %}
+    </div>
+
+    <aside class="border-start bg-white p-3 d-flex flex-column" style="width: 380px; flex-shrink: 0;">
+      <h2 class="h5">Carrito</h2>
+      <div class="flex-grow-1 overflow-auto" id="carrito-lista">
+        <p class="text-muted" id="carrito-vacio-msg">El carrito está vacío.</p>
+      </div>
+      <div class="border-top pt-3 mt-2">
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="h5 mb-0">Total</span>
+          <span class="h4 mb-0" id="carrito-total">$0.00</span>
+        </div>
+        <button type="button" id="confirmar-venta-btn" class="btn btn-success btn-lg w-100 mt-3" disabled>
+          Confirmar venta
+        </button>
+      </div>
+    </aside>
+  </div>
 </div>
+
+<script>
+(function () {
+  var carrito = {};
+
+  var carritoListaEl = document.getElementById('carrito-lista');
+  var carritoTotalEl = document.getElementById('carrito-total');
+  var confirmarBtn = document.getElementById('confirmar-venta-btn');
+  var alertContainer = document.getElementById('pos-alert-container');
+  var confirmarUrl = '{% url "pos:confirmar_venta" %}';
+
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+  var csrftoken = getCookie('csrftoken');
+
+  function formatMoney(value) {
+    return '$' + value.toFixed(2);
+  }
+
+  function agregarProducto(id, nombre, precio) {
+    if (carrito[id]) {
+      carrito[id].cantidad += 1;
+    } else {
+      carrito[id] = { nombre: nombre, precio: precio, cantidad: 1 };
+    }
+    renderCarrito();
+  }
+
+  function cambiarCantidad(id, delta) {
+    if (!carrito[id]) return;
+    carrito[id].cantidad += delta;
+    if (carrito[id].cantidad <= 0) {
+      delete carrito[id];
+    }
+    renderCarrito();
+  }
+
+  function quitarProducto(id) {
+    delete carrito[id];
+    renderCarrito();
+  }
+
+  function calcularTotal() {
+    var total = 0;
+    Object.keys(carrito).forEach(function (id) {
+      total += carrito[id].precio * carrito[id].cantidad;
+    });
+    return total;
+  }
+
+  function renderCarrito() {
+    var ids = Object.keys(carrito);
+    carritoListaEl.innerHTML = '';
+
+    if (ids.length === 0) {
+      var vacioMsg = document.createElement('p');
+      vacioMsg.className = 'text-muted';
+      vacioMsg.textContent = 'El carrito está vacío.';
+      carritoListaEl.appendChild(vacioMsg);
+      confirmarBtn.disabled = true;
+    } else {
+      ids.forEach(function (id) {
+        var linea = carrito[id];
+        var row = document.createElement('div');
+        row.className = 'd-flex justify-content-between align-items-center border-bottom py-2';
+        row.innerHTML =
+          '<div>' +
+            '<div class="fw-semibold">' + linea.nombre + '</div>' +
+            '<div class="text-muted small">' + formatMoney(linea.precio) + ' c/u</div>' +
+          '</div>' +
+          '<div class="d-flex align-items-center gap-1">' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary btn-menos">−</button>' +
+            '<span class="fw-bold px-1">' + linea.cantidad + '</span>' +
+            '<button type="button" class="btn btn-sm btn-outline-secondary btn-mas">+</button>' +
+            '<button type="button" class="btn btn-sm btn-outline-danger btn-quitar">×</button>' +
+          '</div>';
+
+        row.querySelector('.btn-menos').addEventListener('click', function () { cambiarCantidad(id, -1); });
+        row.querySelector('.btn-mas').addEventListener('click', function () { cambiarCantidad(id, 1); });
+        row.querySelector('.btn-quitar').addEventListener('click', function () { quitarProducto(id); });
+
+        carritoListaEl.appendChild(row);
+      });
+      confirmarBtn.disabled = false;
+    }
+
+    carritoTotalEl.textContent = formatMoney(calcularTotal());
+  }
+
+  document.querySelectorAll('.producto-card').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.dataset.productoId;
+      var nombre = btn.dataset.productoNombre;
+      var precio = parseFloat(btn.dataset.productoPrecio);
+      agregarProducto(id, nombre, precio);
+    });
+  });
+
+  function mostrarAlerta(mensaje, tipo) {
+    var alertEl = document.createElement('div');
+    alertEl.className = 'alert alert-' + tipo + ' alert-dismissible fade show';
+    alertEl.setAttribute('role', 'alert');
+    alertEl.innerHTML = mensaje + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>';
+    alertContainer.appendChild(alertEl);
+    setTimeout(function () {
+      alertEl.remove();
+    }, 7000);
+  }
+
+  confirmarBtn.addEventListener('click', function () {
+    var ids = Object.keys(carrito);
+    if (ids.length === 0) return;
+
+    var items = ids.map(function (id) {
+      return { producto_id: parseInt(id, 10), cantidad: carrito[id].cantidad };
+    });
+
+    confirmarBtn.disabled = true;
+    confirmarBtn.textContent = 'Procesando...';
+
+    fetch(confirmarUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken,
+      },
+      body: JSON.stringify({ items: items }),
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (result.ok && result.data.success) {
+          mostrarAlerta(
+            'Venta #' + result.data.venta_id + ' registrada correctamente. Total: ' + formatMoney(parseFloat(result.data.total)),
+            'success'
+          );
+          carrito = {};
+          renderCarrito();
+        } else {
+          mostrarAlerta(result.data.error || 'No se pudo registrar la venta.', 'danger');
+          confirmarBtn.disabled = false;
+        }
+      })
+      .catch(function () {
+        mostrarAlerta('Error de conexión al confirmar la venta. Intenta de nuevo.', 'danger');
+        confirmarBtn.disabled = false;
+      })
+      .finally(function () {
+        confirmarBtn.textContent = 'Confirmar venta';
+      });
+  });
+
+  renderCarrito();
+})();
+</script>
 {% endblock %}
