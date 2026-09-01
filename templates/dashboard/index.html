@@ -4,5 +4,128 @@
 
 {% block dashboard_content %}
 <h1 class="h3 mb-3">Dashboard</h1>
-<p class="text-muted">Bienvenido, {{ request.user.get_username }}.</p>
+
+<section class="mb-4">
+  {% if insumos_alerta %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+      {% for insumo in insumos_alerta %}
+        <div class="col">
+          <div class="alert alert-danger mb-0 h-100">
+            <div class="fw-bold">⚠ {{ insumo.nombre }}</div>
+            <div>Stock actual: {{ insumo.stock_actual }} {{ insumo.get_unidad_medida_display }}</div>
+            <div>Stock mínimo: {{ insumo.stock_minimo }} {{ insumo.get_unidad_medida_display }}</div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-success mb-0">
+      ✓ Todo el inventario está en niveles normales.
+    </div>
+  {% endif %}
+</section>
+
+<div class="row row-cols-1 row-cols-lg-2 g-4">
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h5">Ventas de los últimos 7 días</h2>
+        {% if ventas_has_data %}
+          <canvas id="chart-ventas" height="220"></canvas>
+        {% else %}
+          <p class="text-muted mb-0">Sin datos disponibles.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h5">Top 5 productos más vendidos (30 días)</h2>
+        {% if productos_has_data %}
+          <canvas id="chart-productos" height="220"></canvas>
+        {% else %}
+          <p class="text-muted mb-0">Sin datos disponibles.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h5">Mermas del mes por causa</h2>
+        {% if mermas_has_data %}
+          <canvas id="chart-mermas" height="220"></canvas>
+        {% else %}
+          <p class="text-muted mb-0">Sin datos disponibles.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  {% if ventas_has_data %}
+  var ventasData = JSON.parse("{{ ventas_chart_json|escapejs }}");
+  new Chart(document.getElementById('chart-ventas'), {
+    type: 'line',
+    data: {
+      labels: ventasData.labels,
+      datasets: [{
+        label: 'Total vendido',
+        data: ventasData.data,
+        borderColor: '#0d6efd',
+        backgroundColor: 'rgba(13, 110, 253, 0.15)',
+        tension: 0.3,
+        fill: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } },
+    },
+  });
+  {% endif %}
+
+  {% if productos_has_data %}
+  var productosData = JSON.parse("{{ productos_chart_json|escapejs }}");
+  new Chart(document.getElementById('chart-productos'), {
+    type: 'bar',
+    data: {
+      labels: productosData.labels,
+      datasets: [{
+        label: 'Cantidad vendida',
+        data: productosData.data,
+        backgroundColor: '#198754',
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } },
+    },
+  });
+  {% endif %}
+
+  {% if mermas_has_data %}
+  var mermasData = JSON.parse("{{ mermas_chart_json|escapejs }}");
+  new Chart(document.getElementById('chart-mermas'), {
+    type: 'doughnut',
+    data: {
+      labels: mermasData.labels,
+      datasets: [{
+        data: mermasData.data,
+        backgroundColor: ['#dc3545', '#fd7e14', '#6c757d'],
+      }],
+    },
+    options: { responsive: true },
+  });
+  {% endif %}
+})();
+</script>
 {% endblock %}

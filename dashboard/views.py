@@ -1,15 +1,18 @@
 import datetime
+import json
 
 from django.contrib import messages
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Sum
+from django.db.models.functions import TruncDate
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
 from core.mixins import GroupRequiredMixin
-from core.models import Insumo, Merma, Producto
+from core.models import DetalleVenta, Insumo, Merma, Producto, Venta
 
 from .forms import (
     RECETA_INSUMO_FORMSET_PREFIX,
@@ -24,6 +27,71 @@ from .forms import (
 class DashboardIndexView(GroupRequiredMixin, TemplateView):
     template_name = 'dashboard/index.html'
     allowed_groups = ['Administrador']
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        context['insumos_alerta'] = Insumo.objects.filter(alerta_pendiente=True).order_by('nombre')
+
+        hoy = timezone.localdate()
+
+        # 1. Ventas de los últimos 7 días, agrupadas por día (con días sin venta en 0).
+        inicio_7d = hoy - datetime.timedelta(days=6)
+        inicio_7d_dt = timezone.make_aware(datetime.datetime.combine(inicio_7d, datetime.time.min))
+
+        ventas_por_dia = {
+            row['dia']: row['total_dia']
+            for row in (
+                Venta.objects.filter(fecha__gte=inicio_7d_dt)
+                .annotate(dia=TruncDate('fecha'))
+                .values('dia')
+                .annotate(total_dia=Sum('total'))
+            )
+        }
+        rango_7d = [inicio_7d + datetime.timedelta(days=i) for i in range(7)]
+        ventas_chart = {
+            'labels': [dia.strftime('%d/%m') for dia in rango_7d],
+            'data': [float(ventas_por_dia.get(dia, 0)) for dia in rango_7d],
+        }
+        context['ventas_has_data'] = bool(ventas_por_dia)
+        context['ventas_chart_json'] = json.dumps(ventas_chart, cls=DjangoJSONEncoder)
+
+        # 2. Top 5 productos más vendidos en los últimos 30 días.
+        inicio_30d = hoy - datetime.timedelta(days=29)
+        inicio_30d_dt = timezone.make_aware(datetime.datetime.combine(inicio_30d, datetime.time.min))
+
+        top_productos = list(
+            DetalleVenta.objects.filter(venta__fecha__gte=inicio_30d_dt)
+            .values('producto__nombre')
+            .annotate(cantidad_total=Sum('cantidad'))
+            .order_by('-cantidad_total')[:5]
+        )
+        productos_chart = {
+            'labels': [row['producto__nombre'] for row in top_productos],
+            'data': [float(row['cantidad_total']) for row in top_productos],
+        }
+        context['productos_has_data'] = bool(top_productos)
+        context['productos_chart_json'] = json.dumps(productos_chart, cls=DjangoJSONEncoder)
+
+        # 3. Mermas del mes actual agrupadas por causa.
+        inicio_mes = hoy.replace(day=1)
+        inicio_mes_dt = timezone.make_aware(datetime.datetime.combine(inicio_mes, datetime.time.min))
+
+        causa_display = dict(Merma.Causa.choices)
+        mermas_por_causa = list(
+            Merma.objects.filter(fecha__gte=inicio_mes_dt)
+            .values('causa')
+            .annotate(cantidad_total=Sum('cantidad'))
+            .order_by('causa')
+        )
+        mermas_chart = {
+            'labels': [causa_display.get(row['causa'], row['causa']) for row in mermas_por_causa],
+            'data': [float(row['cantidad_total']) for row in mermas_por_causa],
+        }
+        context['mermas_has_data'] = bool(mermas_por_causa)
+        context['mermas_chart_json'] = json.dumps(mermas_chart, cls=DjangoJSONEncoder)
+
+        return context
 
 
 class PreserveQuerystringMixin:
