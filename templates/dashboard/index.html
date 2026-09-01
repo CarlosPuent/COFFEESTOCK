@@ -3,7 +3,7 @@
 {% block title %}Dashboard - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<h1 class="h3 mb-3">Dashboard</h1>
+<h1 class="h3 mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
 
 <section class="mb-4">
   {% if insumos_alerta %}
@@ -11,7 +11,7 @@
       {% for insumo in insumos_alerta %}
         <div class="col">
           <div class="alert alert-danger mb-0 h-100">
-            <div class="fw-bold">⚠ {{ insumo.nombre }}</div>
+            <div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ insumo.nombre }}</div>
             <div>Stock actual: {{ insumo.stock_actual }} {{ insumo.get_unidad_medida_display }}</div>
             <div>Stock mínimo: {{ insumo.stock_minimo }} {{ insumo.get_unidad_medida_display }}</div>
           </div>
@@ -20,7 +20,7 @@
     </div>
   {% else %}
     <div class="alert alert-success mb-0">
-      ✓ Todo el inventario está en niveles normales.
+      <i class="bi bi-check-circle-fill me-1"></i> Todo el inventario está en niveles normales.
     </div>
   {% endif %}
 </section>
@@ -29,9 +29,9 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-body">
-        <h2 class="h5">Ventas de los últimos 7 días</h2>
+        <h2 class="h5"><i class="bi bi-graph-up-arrow me-1"></i>Ventas de los últimos 7 días</h2>
         {% if ventas_has_data %}
-          <canvas id="chart-ventas" height="220"></canvas>
+          <div class="chart-wrapper"><canvas id="chart-ventas"></canvas></div>
         {% else %}
           <p class="text-muted mb-0">Sin datos disponibles.</p>
         {% endif %}
@@ -42,9 +42,9 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-body">
-        <h2 class="h5">Top 5 productos más vendidos (30 días)</h2>
+        <h2 class="h5"><i class="bi bi-bar-chart-fill me-1"></i>Top 5 productos más vendidos (30 días)</h2>
         {% if productos_has_data %}
-          <canvas id="chart-productos" height="220"></canvas>
+          <div class="chart-wrapper"><canvas id="chart-productos"></canvas></div>
         {% else %}
           <p class="text-muted mb-0">Sin datos disponibles.</p>
         {% endif %}
@@ -55,9 +55,9 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-body">
-        <h2 class="h5">Mermas del mes por causa</h2>
+        <h2 class="h5"><i class="bi bi-pie-chart-fill me-1"></i>Mermas del mes por causa</h2>
         {% if mermas_has_data %}
-          <canvas id="chart-mermas" height="220"></canvas>
+          <div class="chart-wrapper"><canvas id="chart-mermas"></canvas></div>
         {% else %}
           <p class="text-muted mb-0">Sin datos disponibles.</p>
         {% endif %}
@@ -78,14 +78,15 @@
       datasets: [{
         label: 'Total vendido',
         data: ventasData.data,
-        borderColor: '#0d6efd',
-        backgroundColor: 'rgba(13, 110, 253, 0.15)',
+        borderColor: '#6F4E37',
+        backgroundColor: 'rgba(111, 78, 55, 0.15)',
         tension: 0.3,
         fill: true,
       }],
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true } },
     },
@@ -101,11 +102,12 @@
       datasets: [{
         label: 'Cantidad vendida',
         data: productosData.data,
-        backgroundColor: '#198754',
+        backgroundColor: '#C8A97E',
       }],
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true } },
     },
@@ -120,10 +122,13 @@
       labels: mermasData.labels,
       datasets: [{
         data: mermasData.data,
-        backgroundColor: ['#dc3545', '#fd7e14', '#6c757d'],
+        backgroundColor: ['#b3441e', '#C8A97E', '#8a7460'],
       }],
     },
-    options: { responsive: true },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+    },
   });
   {% endif %}
 })();

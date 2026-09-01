@@ -1,0 +1,258 @@
+/* ===== CoffeeStock — identidad visual ===== */
+
+:root {
+  --coffee-dark: #6F4E37;
+  --coffee-dark-2: #58402c;
+  --coffee-cream: #C8A97E;
+  --coffee-bg: #F5EFE6;
+  --coffee-text: #3B2A1E;
+  --coffee-muted: #8a7460;
+  --coffee-danger: #b3441e;
+  --coffee-radius: 0.85rem;
+  --coffee-shadow: 0 2px 10px rgba(111, 78, 55, 0.10);
+  --coffee-shadow-hover: 0 10px 24px rgba(111, 78, 55, 0.20);
+}
+
+body {
+  font-family: 'Nunito', 'Poppins', 'Segoe UI', sans-serif;
+  background-color: var(--coffee-bg);
+  color: var(--coffee-text);
+}
+
+h1, h2, h3, h4, h5, h6,
+.brand-logo,
+.card-title {
+  font-family: 'Poppins', 'Nunito', sans-serif;
+}
+
+a {
+  color: var(--coffee-dark);
+}
+a:hover {
+  color: var(--coffee-dark-2);
+}
+
+/* ---------- Marca / logo ---------- */
+
+.brand-logo {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #fff;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.brand-logo:hover {
+  color: #fff;
+}
+
+/* ---------- Barras oscuras (header POS, sidebar, topbar mobile) ---------- */
+
+.app-header,
+.sidebar,
+.sidebar-offcanvas .offcanvas-header,
+.sidebar-offcanvas .offcanvas-body {
+  background: linear-gradient(180deg, var(--coffee-dark), var(--coffee-dark-2));
+  color: #fff;
+}
+
+.app-header {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.topbar-mobile {
+  background-color: #fff;
+  border-bottom: 1px solid rgba(111, 78, 55, 0.15);
+}
+
+/* ---------- Sidebar ---------- */
+
+.sidebar {
+  width: 250px;
+  flex-shrink: 0;
+}
+
+.sidebar-link {
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 0.6rem;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.85rem;
+  transition: background-color 0.18s ease, color 0.18s ease, transform 0.15s ease;
+}
+.sidebar-link i {
+  font-size: 1.05rem;
+  width: 1.1rem;
+  text-align: center;
+}
+.sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  transform: translateX(2px);
+}
+.sidebar-link.active {
+  background-color: var(--coffee-cream);
+  color: var(--coffee-dark) !important;
+  font-weight: 700;
+}
+.sidebar-link.disabled {
+  color: rgba(255, 255, 255, 0.4);
+  pointer-events: none;
+}
+
+/* ---------- Tarjetas ---------- */
+
+.card {
+  border: none;
+  border-radius: var(--coffee-radius);
+  box-shadow: var(--coffee-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+  box-shadow: var(--coffee-shadow-hover);
+}
+
+/* ---------- Botones ---------- */
+
+.btn {
+  border-radius: 0.6rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn-primary {
+  background-color: var(--coffee-dark);
+  border-color: var(--coffee-dark);
+}
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--coffee-dark-2);
+  border-color: var(--coffee-dark-2);
+}
+
+.btn-outline-primary {
+  color: var(--coffee-dark);
+  border-color: var(--coffee-dark);
+}
+.btn-outline-primary:hover {
+  background-color: var(--coffee-dark);
+  border-color: var(--coffee-dark);
+}
+
+.btn-success {
+  background-color: #4c7a3d;
+  border-color: #4c7a3d;
+}
+.btn-success:hover {
+  background-color: #3e6531;
+  border-color: #3e6531;
+}
+
+/* ---------- Alertas ---------- */
+
+.alert {
+  border: none;
+  border-radius: var(--coffee-radius);
+}
+
+/* ---------- Tablas ---------- */
+
+.table {
+  background-color: #fff;
+  border-radius: var(--coffee-radius);
+  overflow: hidden;
+}
+.table thead {
+  background-color: var(--coffee-cream);
+  color: var(--coffee-text);
+}
+
+/* ---------- Login ---------- */
+
+.login-page {
+  min-height: 100vh;
+  background: linear-gradient(160deg, var(--coffee-bg) 0%, #ecdfc9 100%);
+}
+.login-card {
+  border-radius: 1.1rem;
+}
+
+/* ---------- POS ---------- */
+
+.pos-page {
+  height: 100vh;
+  background-color: var(--coffee-bg);
+}
+
+.producto-card {
+  border: 2px solid transparent;
+  border-radius: 1rem;
+  background-color: #fff;
+  box-shadow: var(--coffee-shadow);
+  min-height: 195px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.producto-card:hover,
+.producto-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--coffee-shadow-hover);
+  border-color: var(--coffee-cream);
+}
+.producto-card:active {
+  transform: translateY(0);
+}
+.producto-card .producto-precio {
+  color: var(--coffee-dark);
+  font-weight: 700;
+}
+
+.producto-imagen-placeholder {
+  height: 120px;
+  font-size: 3rem;
+  background-color: var(--coffee-bg);
+  color: var(--coffee-cream);
+}
+
+.pos-sidebar-cart {
+  background-color: #fff;
+  border-left: 1px solid rgba(111, 78, 55, 0.15);
+}
+
+.btn-cart-qty {
+  min-width: 44px;
+  min-height: 44px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.btn-confirmar-venta {
+  min-height: 56px;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* ---------- Dashboard: gráficos ---------- */
+
+.chart-wrapper {
+  position: relative;
+  height: 260px;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 767.98px) {
+  .producto-card {
+    min-height: 165px;
+  }
+  .pos-sidebar-cart {
+    width: 100% !important;
+    border-left: none;
+    border-top: 1px solid rgba(111, 78, 55, 0.15);
+  }
+}

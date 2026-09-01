@@ -3,9 +3,9 @@
 {% block title %}Insumos - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<div class="d-flex justify-content-between align-items-center mb-3">
-  <h1 class="h3 mb-0">Insumos</h1>
-  <a href="{% url 'dashboard:insumo_create' %}" class="btn btn-primary">Nuevo insumo</a>
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h1 class="h3 mb-0"><i class="bi bi-box-seam me-2"></i>Insumos</h1>
+  <a href="{% url 'dashboard:insumo_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo insumo</a>
 </div>
 
 <form method="get" class="row g-2 mb-3">
@@ -13,7 +13,7 @@
     <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por nombre">
   </div>
   <div class="col-auto">
-    <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+    <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-search me-1"></i>Buscar</button>
   </div>
 </form>
 
@@ -38,8 +38,8 @@
           <td>{{ insumo.stock_minimo }}</td>
           <td>{% if insumo.activo %}Sí{% else %}No{% endif %}</td>
           <td class="text-end">
-            <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
-            <a href="{% url 'dashboard:insumo_delete' insumo.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+            <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i></a>
+            <a href="{% url 'dashboard:insumo_delete' insumo.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3"></i></a>
           </td>
         </tr>
       {% empty %}

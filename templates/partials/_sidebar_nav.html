@@ -1,0 +1,47 @@
+{% load static %}
+<ul class="nav nav-pills flex-column gap-1 mb-4">
+  {% if is_administrador %}
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+        <i class="bi bi-speedometer2"></i> Inicio
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'insumo' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:insumo_list' %}">
+        <i class="bi bi-box-seam"></i> Insumos
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'producto' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:producto_list' %}">
+        <i class="bi bi-cup-hot"></i> Productos
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'merma_list' %}active{% endif %}" href="{% url 'dashboard:merma_list' %}">
+        <i class="bi bi-exclamation-triangle"></i> Mermas
+      </a>
+    </li>
+    <li class="nav-item">
+      <span class="nav-link sidebar-link disabled"><i class="bi bi-bar-chart-line"></i> Reportes (próximamente)</span>
+    </li>
+  {% endif %}
+  <li class="nav-item">
+    <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'merma_create' %}active{% endif %}" href="{% url 'dashboard:merma_create' %}">
+      <i class="bi bi-clipboard2-plus"></i> Registrar merma
+    </a>
+  </li>
+  {% if is_cajero %}
+    <li class="nav-item">
+      <a class="nav-link sidebar-link" href="{% url 'pos:index' %}">
+        <i class="bi bi-shop"></i> Volver al POS
+      </a>
+    </li>
+  {% endif %}
+</ul>
+<hr class="text-white-50">
+<form method="post" action="{% url 'core:logout' %}">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-sm btn-outline-light w-100">
+    <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
+  </button>
+</form>

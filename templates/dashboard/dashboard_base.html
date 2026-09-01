@@ -2,48 +2,46 @@
 
 {% block content %}
 <div class="d-flex" style="min-height: 100vh;">
-  <nav class="bg-dark text-white p-3" style="width: 240px; flex-shrink: 0;">
-    <h5 class="mb-4">CoffeeStock</h5>
-    <ul class="nav nav-pills flex-column gap-1 mb-4">
-      {% if is_administrador %}
-        <li class="nav-item">
-          <a class="nav-link text-white {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">Inicio</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link text-white {% if 'insumo' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:insumo_list' %}">Insumos</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link text-white {% if 'producto' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:producto_list' %}">Productos</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link text-white {% if request.resolver_match.url_name == 'merma_list' %}active{% endif %}" href="{% url 'dashboard:merma_list' %}">Mermas</a>
-        </li>
-        <li class="nav-item">
-          <span class="nav-link text-white-50">Reportes (próximamente)</span>
-        </li>
-      {% endif %}
-      <li class="nav-item">
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'merma_create' %}active{% endif %}" href="{% url 'dashboard:merma_create' %}">Registrar merma</a>
-      </li>
-      {% if is_cajero %}
-        <li class="nav-item">
-          <a class="nav-link text-white" href="{% url 'pos:index' %}">Volver al POS</a>
-        </li>
-      {% endif %}
-    </ul>
-    <hr class="text-white-50">
-    <form method="post" action="{% url 'core:logout' %}">
-      {% csrf_token %}
-      <button type="submit" class="btn btn-sm btn-outline-light w-100">Cerrar sesión</button>
-    </form>
-  </nav>
-  <main class="flex-grow-1 p-4">
-    {% if messages %}
-      {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-      {% endfor %}
+  <!-- Sidebar fijo (escritorio) -->
+  <nav class="sidebar d-none d-md-flex flex-column p-3">
+    {% if is_administrador %}
+      <a href="{% url 'dashboard:index' %}" class="d-block mb-4 text-decoration-none">
+        <span class="brand-logo">☕ CoffeeStock</span>
+      </a>
+    {% else %}
+      <span class="d-block mb-4"><span class="brand-logo">☕ CoffeeStock</span></span>
     {% endif %}
-    {% block dashboard_content %}{% endblock %}
+    {% include 'partials/_sidebar_nav.html' %}
+  </nav>
+
+  <!-- Sidebar en offcanvas (móvil/tablet) -->
+  <div class="offcanvas offcanvas-start sidebar-offcanvas" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
+    <div class="offcanvas-header">
+      <span class="brand-logo" id="sidebarOffcanvasLabel">☕ CoffeeStock</span>
+      <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column pt-0">
+      {% include 'partials/_sidebar_nav.html' %}
+    </div>
+  </div>
+
+  <main class="flex-grow-1 d-flex flex-column">
+    <div class="topbar-mobile d-flex d-md-none align-items-center justify-content-between p-2">
+      <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+        <i class="bi bi-list fs-4"></i>
+      </button>
+      <span class="fw-bold" style="color: var(--coffee-dark);">☕ CoffeeStock</span>
+      <span style="width: 42px;"></span>
+    </div>
+
+    <div class="p-3 p-md-4 flex-grow-1">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+      {% block dashboard_content %}{% endblock %}
+    </div>
   </main>
 </div>
 {% endblock %}

@@ -4,13 +4,13 @@
 {% block title %}{% if object %}Editar producto{% else %}Nuevo producto{% endif %} - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<h1 class="h3 mb-3">{% if object %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+<h1 class="h3 mb-3"><i class="bi bi-cup-hot me-2"></i>{% if object %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
 
 <form method="post" enctype="multipart/form-data">
   {% csrf_token %}
   {{ form|crispy }}
 
-  <h2 class="h5 mt-4">Receta (insumos requeridos)</h2>
+  <h2 class="h5 mt-4"><i class="bi bi-journal-text me-1"></i>Receta (insumos requeridos)</h2>
   {{ receta_formset.management_form }}
 
   {% if receta_formset.non_form_errors %}
@@ -45,7 +45,7 @@
                   <label class="form-check-label">Eliminar</label>
                 </div>
               {% else %}
-                <button type="button" class="btn btn-sm btn-outline-danger remove-receta-row">Quitar</button>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-receta-row"><i class="bi bi-x-lg"></i> Quitar</button>
               {% endif %}
             </td>
           </tr>
@@ -55,12 +55,12 @@
   </div>
 
   <button type="button" id="add-receta-row" class="btn btn-sm btn-outline-secondary mb-3">
-    Agregar insumo a la receta
+    <i class="bi bi-plus-lg me-1"></i>Agregar insumo a la receta
   </button>
 
   <div>
-    <button type="submit" class="btn btn-primary">Guardar</button>
-    <a href="{% url 'dashboard:producto_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+    <a href="{% url 'dashboard:producto_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Cancelar</a>
   </div>
 </form>
 

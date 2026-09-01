@@ -4,10 +4,14 @@
 {% block title %}Iniciar sesión - CoffeeStock{% endblock %}
 
 {% block content %}
-<div class="container d-flex justify-content-center align-items-center" style="min-height: 90vh;">
-  <div class="card shadow-sm" style="width: 100%; max-width: 400px;">
-    <div class="card-body">
-      <h1 class="h4 mb-4 text-center">CoffeeStock</h1>
+<div class="login-page container d-flex justify-content-center align-items-center">
+  <div class="card login-card shadow-sm" style="width: 100%; max-width: 400px;">
+    <div class="card-body p-4">
+      <div class="text-center mb-4">
+        <span class="d-inline-block px-3 py-2 rounded-3" style="background-color: var(--coffee-dark);">
+          <span class="brand-logo">☕ CoffeeStock</span>
+        </span>
+      </div>
 
       {% if messages %}
         {% for message in messages %}
@@ -16,13 +20,17 @@
       {% endif %}
 
       {% if form.errors %}
-        <div class="alert alert-danger">Usuario o contraseña incorrectos.</div>
+        <div class="alert alert-danger">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i> Usuario o contraseña incorrectos.
+        </div>
       {% endif %}
 
       <form method="post">
         {% csrf_token %}
         {{ form|crispy }}
-        <button type="submit" class="btn btn-primary w-100 mt-3">Ingresar</button>
+        <button type="submit" class="btn btn-primary w-100 mt-3">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar
+        </button>
       </form>
     </div>
   </div>
