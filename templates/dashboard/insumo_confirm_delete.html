@@ -1,0 +1,13 @@
+{% extends 'dashboard/dashboard_base.html' %}
+
+{% block title %}Eliminar insumo - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<h1 class="h3 mb-3">Eliminar insumo</h1>
+<p>¿Seguro que deseas eliminar <strong>{{ object }}</strong>? Esta acción no se puede deshacer.</p>
+<form method="post">
+  {% csrf_token %}
+  <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+  <a href="{% url 'dashboard:insumo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+</form>
+{% endblock %}

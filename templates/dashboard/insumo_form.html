@@ -1,0 +1,15 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Editar insumo{% else %}Nuevo insumo{% endif %} - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<h1 class="h3 mb-3">{% if object %}Editar insumo{% else %}Nuevo insumo{% endif %}</h1>
+
+<form method="post">
+  {% csrf_token %}
+  {{ form|crispy }}
+  <button type="submit" class="btn btn-primary">Guardar</button>
+  <a href="{% url 'dashboard:insumo_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+</form>
+{% endblock %}

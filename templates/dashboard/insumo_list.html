@@ -1,0 +1,53 @@
+{% extends 'dashboard/dashboard_base.html' %}
+
+{% block title %}Insumos - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Insumos</h1>
+  <a href="{% url 'dashboard:insumo_create' %}" class="btn btn-primary">Nuevo insumo</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-auto">
+    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por nombre">
+  </div>
+  <div class="col-auto">
+    <button type="submit" class="btn btn-outline-secondary">Buscar</button>
+  </div>
+</form>
+
+<div class="table-responsive">
+  <table class="table table-bordered table-hover align-middle">
+    <thead>
+      <tr>
+        <th>Nombre</th>
+        <th>Unidad</th>
+        <th>Stock actual</th>
+        <th>Stock mínimo</th>
+        <th>Activo</th>
+        <th class="text-end">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for insumo in insumos %}
+        <tr class="{% if insumo.stock_actual < insumo.stock_minimo %}table-danger{% endif %}">
+          <td>{{ insumo.nombre }}</td>
+          <td>{{ insumo.get_unidad_medida_display }}</td>
+          <td>{{ insumo.stock_actual }}</td>
+          <td>{{ insumo.stock_minimo }}</td>
+          <td>{% if insumo.activo %}Sí{% else %}No{% endif %}</td>
+          <td class="text-end">
+            <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+            <a href="{% url 'dashboard:insumo_delete' insumo.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="6" class="text-center text-muted">No hay insumos registrados.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% include 'dashboard/_pagination.html' %}
+{% endblock %}

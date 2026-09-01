@@ -1,0 +1,98 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if object %}Editar producto{% else %}Nuevo producto{% endif %} - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<h1 class="h3 mb-3">{% if object %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  {{ form|crispy }}
+
+  <h2 class="h5 mt-4">Receta (insumos requeridos)</h2>
+  {{ receta_formset.management_form }}
+
+  {% if receta_formset.non_form_errors %}
+    <div class="alert alert-danger">{{ receta_formset.non_form_errors }}</div>
+  {% endif %}
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle" id="receta-formset-table">
+      <thead>
+        <tr>
+          <th>Insumo</th>
+          <th>Cantidad requerida</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="receta-formset-body">
+        {% for receta_form in receta_formset %}
+          <tr class="receta-form-row">
+            {% for hidden in receta_form.hidden_fields %}{{ hidden }}{% endfor %}
+            <td>
+              {{ receta_form.insumo }}
+              {{ receta_form.insumo.errors }}
+            </td>
+            <td>
+              {{ receta_form.cantidad_requerida }}
+              {{ receta_form.cantidad_requerida.errors }}
+            </td>
+            <td>
+              {% if receta_form.instance.pk %}
+                <div class="form-check">
+                  {{ receta_form.DELETE }}
+                  <label class="form-check-label">Eliminar</label>
+                </div>
+              {% else %}
+                <button type="button" class="btn btn-sm btn-outline-danger remove-receta-row">Quitar</button>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <button type="button" id="add-receta-row" class="btn btn-sm btn-outline-secondary mb-3">
+    Agregar insumo a la receta
+  </button>
+
+  <div>
+    <button type="submit" class="btn btn-primary">Guardar</button>
+    <a href="{% url 'dashboard:producto_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+  </div>
+</form>
+
+<template id="receta-empty-form-template">
+  <tr class="receta-form-row">
+    <td>{{ receta_formset.empty_form.insumo }}</td>
+    <td>{{ receta_formset.empty_form.cantidad_requerida }}</td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger remove-receta-row">Quitar</button></td>
+  </tr>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var addButton = document.getElementById('add-receta-row');
+  var formsetBody = document.getElementById('receta-formset-body');
+  var totalFormsInput = document.querySelector('#id_receta_insumos-TOTAL_FORMS');
+  var emptyFormTemplate = document.getElementById('receta-empty-form-template');
+
+  addButton.addEventListener('click', function () {
+    var formIndex = parseInt(totalFormsInput.value, 10);
+    var newRowHtml = emptyFormTemplate.innerHTML.replace(/__prefix__/g, formIndex);
+    var tempTbody = document.createElement('tbody');
+    tempTbody.innerHTML = newRowHtml.trim();
+    formsetBody.appendChild(tempTbody.firstElementChild);
+    totalFormsInput.value = formIndex + 1;
+  });
+
+  formsetBody.addEventListener('click', function (event) {
+    if (event.target.classList.contains('remove-receta-row')) {
+      event.target.closest('tr').remove();
+    }
+  });
+});
+</script>
+{% endblock %}
