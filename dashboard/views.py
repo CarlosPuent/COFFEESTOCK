@@ -1,18 +1,41 @@
+import datetime
+
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import ProtectedError
 from django.shortcuts import redirect
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
 
 from core.mixins import GroupRequiredMixin
-from core.models import Insumo, Producto
+from core.models import Insumo, Merma, Producto
 
-from .forms import RECETA_INSUMO_FORMSET_PREFIX, InsumoForm, ProductoForm, RecetaInsumoFormSet
+from .forms import (
+    RECETA_INSUMO_FORMSET_PREFIX,
+    InsumoForm,
+    MermaFilterForm,
+    MermaForm,
+    ProductoForm,
+    RecetaInsumoFormSet,
+)
 
 
 class DashboardIndexView(GroupRequiredMixin, TemplateView):
     template_name = 'dashboard/index.html'
     allowed_groups = ['Administrador']
+
+
+class PreserveQuerystringMixin:
+    """Agrega al contexto la querystring actual (sin 'page') para armar
+    los enlaces de paginación conservando filtros/búsqueda."""
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        params = self.request.GET.copy()
+        params.pop('page', None)
+        context['querystring'] = params.urlencode()
+        return context
 
 
 class ProtectedDeleteMixin:
@@ -39,7 +62,7 @@ class ProtectedDeleteMixin:
 # Insumo
 # ---------------------------------------------------------------------------
 
-class InsumoListView(GroupRequiredMixin, ListView):
+class InsumoListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
     model = Insumo
     template_name = 'dashboard/insumo_list.html'
     context_object_name = 'insumos'
@@ -86,7 +109,7 @@ class InsumoDeleteView(GroupRequiredMixin, ProtectedDeleteMixin, DeleteView):
 # Producto (con formset inline de RecetaInsumo)
 # ---------------------------------------------------------------------------
 
-class ProductoListView(GroupRequiredMixin, ListView):
+class ProductoListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
     model = Producto
     template_name = 'dashboard/producto_list.html'
     context_object_name = 'productos'
@@ -151,3 +174,71 @@ class ProductoDeleteView(GroupRequiredMixin, ProtectedDeleteMixin, DeleteView):
     template_name = 'dashboard/producto_confirm_delete.html'
     success_url = reverse_lazy('dashboard:producto_list')
     allowed_groups = ['Administrador']
+
+
+# ---------------------------------------------------------------------------
+# Merma
+# ---------------------------------------------------------------------------
+
+class MermaCreateView(GroupRequiredMixin, CreateView):
+    model = Merma
+    form_class = MermaForm
+    template_name = 'dashboard/merma_form.html'
+    allowed_groups = ['Cajero', 'Administrador']
+
+    def form_valid(self, form):
+        merma = form.save(commit=False)
+        merma.usuario_responsable = self.request.user
+
+        try:
+            with transaction.atomic():
+                merma.insumo.descontar_stock(merma.cantidad)
+                merma.save()
+        except ValueError as exc:
+            form.add_error('cantidad', str(exc))
+            return self.form_invalid(form)
+
+        messages.success(
+            self.request,
+            f'Merma registrada correctamente: {merma.cantidad} de "{merma.insumo}".',
+        )
+        return redirect(self.get_success_url())
+
+    def get_success_url(self):
+        if self.request.user.groups.filter(name='Administrador').exists():
+            return reverse('dashboard:merma_list')
+        return reverse('pos:index')
+
+
+class MermaListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
+    model = Merma
+    template_name = 'dashboard/merma_list.html'
+    context_object_name = 'mermas'
+    paginate_by = 20
+    allowed_groups = ['Administrador']
+
+    def get_queryset(self):
+        queryset = Merma.objects.select_related('insumo', 'usuario_responsable').all()
+        form = MermaFilterForm(self.request.GET or None)
+        if form.is_valid():
+            data = form.cleaned_data
+            if data.get('insumo'):
+                queryset = queryset.filter(insumo=data['insumo'])
+            if data.get('causa'):
+                queryset = queryset.filter(causa=data['causa'])
+            if data.get('fecha_desde'):
+                inicio = timezone.make_aware(
+                    datetime.datetime.combine(data['fecha_desde'], datetime.time.min)
+                )
+                queryset = queryset.filter(fecha__gte=inicio)
+            if data.get('fecha_hasta'):
+                fin = timezone.make_aware(
+                    datetime.datetime.combine(data['fecha_hasta'], datetime.time.max)
+                )
+                queryset = queryset.filter(fecha__lte=fin)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = MermaFilterForm(self.request.GET or None)
+        return context

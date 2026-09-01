@@ -8,6 +8,10 @@
     <h1 class="h5 mb-0">CoffeeStock POS</h1>
     <div class="d-flex align-items-center gap-3">
       <span>{{ request.user.get_username }}</span>
+      <a href="{% url 'dashboard:merma_create' %}" class="btn btn-sm btn-outline-warning">Registrar merma</a>
+      {% if is_administrador %}
+        <a href="{% url 'dashboard:index' %}" class="btn btn-sm btn-outline-light">Dashboard</a>
+      {% endif %}
       <form method="post" action="{% url 'core:logout' %}" class="mb-0">
         {% csrf_token %}
         <button type="submit" class="btn btn-sm btn-outline-light">Cerrar sesión</button>

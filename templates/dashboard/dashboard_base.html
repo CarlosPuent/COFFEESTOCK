@@ -5,21 +5,31 @@
   <nav class="bg-dark text-white p-3" style="width: 240px; flex-shrink: 0;">
     <h5 class="mb-4">CoffeeStock</h5>
     <ul class="nav nav-pills flex-column gap-1 mb-4">
+      {% if is_administrador %}
+        <li class="nav-item">
+          <a class="nav-link text-white {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">Inicio</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white {% if 'insumo' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:insumo_list' %}">Insumos</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white {% if 'producto' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:producto_list' %}">Productos</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-white {% if request.resolver_match.url_name == 'merma_list' %}active{% endif %}" href="{% url 'dashboard:merma_list' %}">Mermas</a>
+        </li>
+        <li class="nav-item">
+          <span class="nav-link text-white-50">Reportes (próximamente)</span>
+        </li>
+      {% endif %}
       <li class="nav-item">
-        <a class="nav-link text-white {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">Inicio</a>
+        <a class="nav-link text-white {% if request.resolver_match.url_name == 'merma_create' %}active{% endif %}" href="{% url 'dashboard:merma_create' %}">Registrar merma</a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link text-white {% if 'insumo' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:insumo_list' %}">Insumos</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link text-white {% if 'producto' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:producto_list' %}">Productos</a>
-      </li>
-      <li class="nav-item">
-        <span class="nav-link text-white-50">Mermas (próximamente)</span>
-      </li>
-      <li class="nav-item">
-        <span class="nav-link text-white-50">Reportes (próximamente)</span>
-      </li>
+      {% if is_cajero %}
+        <li class="nav-item">
+          <a class="nav-link text-white" href="{% url 'pos:index' %}">Volver al POS</a>
+        </li>
+      {% endif %}
     </ul>
     <hr class="text-white-50">
     <form method="post" action="{% url 'core:logout' %}">

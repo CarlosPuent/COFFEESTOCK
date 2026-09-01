@@ -16,4 +16,7 @@ urlpatterns = [
     path('productos/nuevo/', views.ProductoCreateView.as_view(), name='producto_create'),
     path('productos/<int:pk>/editar/', views.ProductoUpdateView.as_view(), name='producto_update'),
     path('productos/<int:pk>/eliminar/', views.ProductoDeleteView.as_view(), name='producto_delete'),
+
+    path('mermas/nueva/', views.MermaCreateView.as_view(), name='merma_create'),
+    path('mermas/', views.MermaListView.as_view(), name='merma_list'),
 ]
