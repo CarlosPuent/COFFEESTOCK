@@ -7,7 +7,8 @@ from .models import DetalleVenta, Insumo, Merma, Producto, RecetaInsumo, Venta
 class InsumoAdmin(admin.ModelAdmin):
     list_display = (
         'nombre', 'unidad_medida', 'stock_actual', 'stock_minimo',
-        'costo_unitario', 'activo', 'alerta_pendiente', 'fecha_actualizacion',
+        'costo_unitario', 'activo', 'alerta_pendiente', 'ultima_alerta_enviada',
+        'fecha_actualizacion',
     )
     list_filter = ('unidad_medida', 'activo', 'alerta_pendiente')
     search_fields = ('nombre',)

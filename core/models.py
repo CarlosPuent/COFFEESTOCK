@@ -23,6 +23,7 @@ class Insumo(models.Model):
     activo = models.BooleanField(default=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     alerta_pendiente = models.BooleanField(default=False)
+    ultima_alerta_enviada = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['nombre']
@@ -42,6 +43,11 @@ class Insumo(models.Model):
         insumo.stock_actual = nuevo_stock
         insumo.alerta_pendiente = nuevo_stock <= insumo.stock_minimo
         insumo.save(update_fields=['stock_actual', 'alerta_pendiente', 'fecha_actualizacion'])
+
+        if insumo.alerta_pendiente:
+            from core.services.alertas import enviar_alerta_stock
+            enviar_alerta_stock(insumo)
+
         self.refresh_from_db()
 
 

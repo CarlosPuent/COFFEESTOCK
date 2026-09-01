@@ -173,3 +173,35 @@ MAILERS = {
 }
 
 SENDGRID_API_KEY = env('SENDGRID_API_KEY', default='')
+SENDGRID_FROM_EMAIL = env('SENDGRID_FROM_EMAIL', default='')
+SENDGRID_ADMIN_EMAIL = env('SENDGRID_ADMIN_EMAIL', default='')
+
+
+# Logging
+# https://docs.djangoproject.com/en/6.1/topics/logging/
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'core': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+    },
+}
