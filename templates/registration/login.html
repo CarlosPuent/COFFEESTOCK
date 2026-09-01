@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Iniciar sesión - CoffeeStock{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 90vh;">
+  <div class="card shadow-sm" style="width: 100%; max-width: 400px;">
+    <div class="card-body">
+      <h1 class="h4 mb-4 text-center">CoffeeStock</h1>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {% if form.errors %}
+        <div class="alert alert-danger">Usuario o contraseña incorrectos.</div>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        {{ form|crispy }}
+        <button type="submit" class="btn btn-primary w-100 mt-3">Ingresar</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

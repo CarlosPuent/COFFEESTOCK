@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - CoffeeStock{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1>Dashboard</h1>
+  <p class="text-muted">Próximamente.</p>
+  <form method="post" action="{% url 'core:logout' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-outline-secondary">Cerrar sesión</button>
+  </form>
+</div>
+{% endblock %}

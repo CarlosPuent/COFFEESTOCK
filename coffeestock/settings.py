@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 
 import environ
+from django.contrib.messages import constants as message_constants
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -45,10 +46,20 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'core',
+    'pos',
+    'dashboard',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
+
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'core:login'
+LOGOUT_REDIRECT_URL = 'core:login'
+
+MESSAGE_TAGS = {
+    message_constants.ERROR: 'danger',
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
