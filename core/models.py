@@ -27,6 +27,10 @@ class Insumo(models.Model):
 
     class Meta:
         ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['nombre'], name='idx_insumo_nombre'),
+            models.Index(fields=['alerta_pendiente'], name='idx_insumo_alerta_pendiente'),
+        ]
 
     def __str__(self):
         return f'{self.nombre} ({self.get_unidad_medida_display()})'
@@ -67,6 +71,9 @@ class Producto(models.Model):
 
     class Meta:
         ordering = ['nombre']
+        indexes = [
+            models.Index(fields=['nombre'], name='idx_producto_nombre'),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -116,6 +123,10 @@ class Merma(models.Model):
 
     class Meta:
         ordering = ['-fecha']
+        indexes = [
+            models.Index(fields=['fecha'], name='idx_merma_fecha'),
+            models.Index(fields=['fecha', 'causa'], name='idx_merma_fecha_causa'),
+        ]
 
     def __str__(self):
         return f'Merma de {self.cantidad} {self.insumo.unidad_medida} - {self.insumo}'
@@ -132,6 +143,9 @@ class Venta(models.Model):
 
     class Meta:
         ordering = ['-fecha']
+        indexes = [
+            models.Index(fields=['fecha'], name='idx_venta_fecha'),
+        ]
 
     def __str__(self):
         return f'Venta #{self.pk} - {self.fecha:%Y-%m-%d %H:%M}'

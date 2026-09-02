@@ -1,20 +1,31 @@
 {% extends 'base.html' %}
-
 {% block title %}Punto de venta - CoffeeStock{% endblock %}
-
 {% block content %}
 <div class="pos-page d-flex flex-column">
-  <header class="app-header d-flex flex-wrap justify-content-between align-items-center px-3 py-2 gap-2">
-    <span class="brand-logo">☕ CoffeeStock <small class="fw-normal opacity-75">POS</small></span>
+  <header
+    class="app-header d-flex flex-wrap justify-content-between align-items-center px-3 py-2 gap-2"
+  >
+    <span class="brand-logo"
+      >CoffeeStock <small class="fw-normal opacity-75">POS</small></span
+    >
     <div class="d-flex align-items-center gap-2 flex-wrap">
-      <span class="d-none d-sm-inline"><i class="bi bi-person-circle me-1"></i>{{ request.user.get_username }}</span>
-      <a href="{% url 'dashboard:merma_create' %}" class="btn btn-sm btn-outline-warning">
+      <span class="d-none d-sm-inline"
+        ><i class="bi bi-person-circle me-1"></i>{{ request.user.get_username
+        }}</span
+      >
+      <a
+        href="{% url 'dashboard:merma_create' %}"
+        class="btn btn-sm btn-outline-warning"
+      >
         <i class="bi bi-clipboard2-plus me-1"></i>Registrar merma
       </a>
       {% if is_administrador %}
-        <a href="{% url 'dashboard:index' %}" class="btn btn-sm btn-outline-light">
-          <i class="bi bi-speedometer2 me-1"></i>Dashboard
-        </a>
+      <a
+        href="{% url 'dashboard:index' %}"
+        class="btn btn-sm btn-outline-light"
+      >
+        <i class="bi bi-speedometer2 me-1"></i>Dashboard
+      </a>
       {% endif %}
       <form method="post" action="{% url 'core:logout' %}" class="mb-0">
         {% csrf_token %}
@@ -31,34 +42,50 @@
     <div class="flex-grow-1 overflow-auto p-3" id="productos-panel">
       {% regroup productos by categoria as categoria_list %}
       {% for categoria in categoria_list %}
-        <h2 class="h5 mt-2" style="color: var(--coffee-dark);">{{ categoria.list.0.get_categoria_display }}</h2>
-        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
-          {% for producto in categoria.list %}
-            <div class="col">
-              <button
-                type="button"
-                class="btn w-100 h-100 p-2 producto-card text-start"
-                data-producto-id="{{ producto.id }}"
-                data-producto-nombre="{{ producto.nombre }}"
-                data-producto-precio="{{ producto.precio_venta }}"
-              >
-                {% if producto.imagen %}
-                  <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="w-100 rounded mb-2" style="height: 120px; object-fit: cover;">
-                {% else %}
-                  <div class="w-100 rounded mb-2 d-flex align-items-center justify-content-center producto-imagen-placeholder">☕</div>
-                {% endif %}
-                <div class="fw-bold">{{ producto.nombre }}</div>
-                <div class="producto-precio">${{ producto.precio_venta }}</div>
-              </button>
+      <h2 class="h5 mt-2" style="color: var(--coffee-dark)">
+        {{ categoria.list.0.get_categoria_display }}
+      </h2>
+      <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
+        {% for producto in categoria.list %}
+        <div class="col">
+          <button
+            type="button"
+            class="btn w-100 h-100 p-2 producto-card text-start"
+            data-producto-id="{{ producto.id }}"
+            data-producto-nombre="{{ producto.nombre }}"
+            data-producto-precio="{{ producto.precio_venta }}"
+          >
+            {% if producto.imagen %}
+            <img
+              src="{{ producto.imagen.url }}"
+              alt="{{ producto.nombre }}"
+              class="w-100 rounded mb-2"
+              style="height: 120px; object-fit: cover"
+            />
+            {% else %}
+            <div
+              class="w-100 rounded mb-2 d-flex align-items-center justify-content-center producto-imagen-placeholder"
+            >
+              ☕
             </div>
-          {% endfor %}
+            {% endif %}
+            <div class="fw-bold">{{ producto.nombre }}</div>
+            <div class="producto-precio">${{ producto.precio_venta }}</div>
+          </button>
         </div>
+        {% endfor %}
+      </div>
       {% empty %}
-        <p class="text-muted"><i class="bi bi-inbox me-1"></i>No hay productos activos disponibles.</p>
+      <p class="text-muted">
+        <i class="bi bi-inbox me-1"></i>No hay productos activos disponibles.
+      </p>
       {% endfor %}
     </div>
 
-    <aside class="pos-sidebar-cart p-3 d-flex flex-column" style="width: 100%; max-width: 400px; flex-shrink: 0;">
+    <aside
+      class="pos-sidebar-cart p-3 d-flex flex-column"
+      style="width: 100%; max-width: 400px; flex-shrink: 0"
+    >
       <h2 class="h5"><i class="bi bi-cart3 me-1"></i>Carrito</h2>
       <div class="flex-grow-1 overflow-auto" id="carrito-lista">
         <p class="text-muted" id="carrito-vacio-msg">El carrito está vacío.</p>
@@ -66,9 +93,19 @@
       <div class="border-top pt-3 mt-2">
         <div class="d-flex justify-content-between align-items-center">
           <span class="h5 mb-0">Total</span>
-          <span class="h4 mb-0" id="carrito-total" style="color: var(--coffee-dark);">$0.00</span>
+          <span
+            class="h4 mb-0"
+            id="carrito-total"
+            style="color: var(--coffee-dark)"
+            >$0.00</span
+          >
         </div>
-        <button type="button" id="confirmar-venta-btn" class="btn btn-success btn-confirmar-venta w-100 mt-3" disabled>
+        <button
+          type="button"
+          id="confirmar-venta-btn"
+          class="btn btn-success btn-confirmar-venta w-100 mt-3"
+          disabled
+        >
           <i class="bi bi-check-circle-fill me-1"></i>Confirmar venta
         </button>
       </div>
@@ -77,172 +114,207 @@
 </div>
 
 <script>
-(function () {
-  var carrito = {};
+  (function () {
+    var carrito = {};
 
-  var carritoListaEl = document.getElementById('carrito-lista');
-  var carritoTotalEl = document.getElementById('carrito-total');
-  var confirmarBtn = document.getElementById('confirmar-venta-btn');
-  var alertContainer = document.getElementById('pos-alert-container');
-  var confirmarUrl = '{% url "pos:confirmar_venta" %}';
+    var carritoListaEl = document.getElementById("carrito-lista");
+    var carritoTotalEl = document.getElementById("carrito-total");
+    var confirmarBtn = document.getElementById("confirmar-venta-btn");
+    var alertContainer = document.getElementById("pos-alert-container");
+    var confirmarUrl = '{% url "pos:confirmar_venta" %}';
 
-  function getCookie(name) {
-    var cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      var cookies = document.cookie.split(';');
-      for (var i = 0; i < cookies.length; i++) {
-        var cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
+    function getCookie(name) {
+      var cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        var cookies = document.cookie.split(";");
+        for (var i = 0; i < cookies.length; i++) {
+          var cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === name + "=") {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
         }
       }
+      return cookieValue;
     }
-    return cookieValue;
-  }
-  var csrftoken = getCookie('csrftoken');
+    var csrftoken = getCookie("csrftoken");
 
-  function formatMoney(value) {
-    return '$' + value.toFixed(2);
-  }
-
-  function agregarProducto(id, nombre, precio) {
-    if (carrito[id]) {
-      carrito[id].cantidad += 1;
-    } else {
-      carrito[id] = { nombre: nombre, precio: precio, cantidad: 1 };
+    function formatMoney(value) {
+      return "$" + value.toFixed(2);
     }
-    renderCarrito();
-  }
 
-  function cambiarCantidad(id, delta) {
-    if (!carrito[id]) return;
-    carrito[id].cantidad += delta;
-    if (carrito[id].cantidad <= 0) {
+    function agregarProducto(id, nombre, precio) {
+      if (carrito[id]) {
+        carrito[id].cantidad += 1;
+      } else {
+        carrito[id] = { nombre: nombre, precio: precio, cantidad: 1 };
+      }
+      renderCarrito();
+    }
+
+    function cambiarCantidad(id, delta) {
+      if (!carrito[id]) return;
+      carrito[id].cantidad += delta;
+      if (carrito[id].cantidad <= 0) {
+        delete carrito[id];
+      }
+      renderCarrito();
+    }
+
+    function quitarProducto(id) {
       delete carrito[id];
+      renderCarrito();
     }
-    renderCarrito();
-  }
 
-  function quitarProducto(id) {
-    delete carrito[id];
-    renderCarrito();
-  }
+    function calcularTotal() {
+      var total = 0;
+      Object.keys(carrito).forEach(function (id) {
+        total += carrito[id].precio * carrito[id].cantidad;
+      });
+      return total;
+    }
 
-  function calcularTotal() {
-    var total = 0;
-    Object.keys(carrito).forEach(function (id) {
-      total += carrito[id].precio * carrito[id].cantidad;
-    });
-    return total;
-  }
+    function renderCarrito() {
+      var ids = Object.keys(carrito);
+      carritoListaEl.innerHTML = "";
 
-  function renderCarrito() {
-    var ids = Object.keys(carrito);
-    carritoListaEl.innerHTML = '';
-
-    if (ids.length === 0) {
-      var vacioMsg = document.createElement('p');
-      vacioMsg.className = 'text-muted';
-      vacioMsg.textContent = 'El carrito está vacío.';
-      carritoListaEl.appendChild(vacioMsg);
-      confirmarBtn.disabled = true;
-    } else {
-      ids.forEach(function (id) {
-        var linea = carrito[id];
-        var row = document.createElement('div');
-        row.className = 'd-flex justify-content-between align-items-center border-bottom py-2';
-        row.innerHTML =
-          '<div>' +
-            '<div class="fw-semibold">' + linea.nombre + '</div>' +
-            '<div class="text-muted small">' + formatMoney(linea.precio) + ' c/u</div>' +
-          '</div>' +
-          '<div class="d-flex align-items-center gap-1">' +
+      if (ids.length === 0) {
+        var vacioMsg = document.createElement("p");
+        vacioMsg.className = "text-muted";
+        vacioMsg.textContent = "El carrito está vacío.";
+        carritoListaEl.appendChild(vacioMsg);
+        confirmarBtn.disabled = true;
+      } else {
+        ids.forEach(function (id) {
+          var linea = carrito[id];
+          var row = document.createElement("div");
+          row.className =
+            "d-flex justify-content-between align-items-center border-bottom py-2";
+          row.innerHTML =
+            "<div>" +
+            '<div class="fw-semibold">' +
+            linea.nombre +
+            "</div>" +
+            '<div class="text-muted small">' +
+            formatMoney(linea.precio) +
+            " c/u</div>" +
+            "</div>" +
+            '<div class="d-flex align-items-center gap-1">' +
             '<button type="button" class="btn btn-outline-secondary btn-cart-qty btn-menos">−</button>' +
-            '<span class="fw-bold px-2">' + linea.cantidad + '</span>' +
+            '<span class="fw-bold px-2">' +
+            linea.cantidad +
+            "</span>" +
             '<button type="button" class="btn btn-outline-secondary btn-cart-qty btn-mas">+</button>' +
             '<button type="button" class="btn btn-outline-danger btn-cart-qty btn-quitar"><i class="bi bi-trash"></i></button>' +
-          '</div>';
+            "</div>";
 
-        row.querySelector('.btn-menos').addEventListener('click', function () { cambiarCantidad(id, -1); });
-        row.querySelector('.btn-mas').addEventListener('click', function () { cambiarCantidad(id, 1); });
-        row.querySelector('.btn-quitar').addEventListener('click', function () { quitarProducto(id); });
+          row
+            .querySelector(".btn-menos")
+            .addEventListener("click", function () {
+              cambiarCantidad(id, -1);
+            });
+          row.querySelector(".btn-mas").addEventListener("click", function () {
+            cambiarCantidad(id, 1);
+          });
+          row
+            .querySelector(".btn-quitar")
+            .addEventListener("click", function () {
+              quitarProducto(id);
+            });
 
-        carritoListaEl.appendChild(row);
-      });
-      confirmarBtn.disabled = false;
+          carritoListaEl.appendChild(row);
+        });
+        confirmarBtn.disabled = false;
+      }
+
+      carritoTotalEl.textContent = formatMoney(calcularTotal());
     }
 
-    carritoTotalEl.textContent = formatMoney(calcularTotal());
-  }
-
-  document.querySelectorAll('.producto-card').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      var id = btn.dataset.productoId;
-      var nombre = btn.dataset.productoNombre;
-      var precio = parseFloat(btn.dataset.productoPrecio);
-      agregarProducto(id, nombre, precio);
-    });
-  });
-
-  function mostrarAlerta(mensaje, tipo) {
-    var alertEl = document.createElement('div');
-    alertEl.className = 'alert alert-' + tipo + ' alert-dismissible fade show';
-    alertEl.setAttribute('role', 'alert');
-    alertEl.innerHTML = mensaje + '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>';
-    alertContainer.appendChild(alertEl);
-    setTimeout(function () {
-      alertEl.remove();
-    }, 7000);
-  }
-
-  confirmarBtn.addEventListener('click', function () {
-    var ids = Object.keys(carrito);
-    if (ids.length === 0) return;
-
-    var items = ids.map(function (id) {
-      return { producto_id: parseInt(id, 10), cantidad: carrito[id].cantidad };
-    });
-
-    confirmarBtn.disabled = true;
-    confirmarBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Procesando...';
-
-    fetch(confirmarUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken,
-      },
-      body: JSON.stringify({ items: items }),
-    })
-      .then(function (response) {
-        return response.json().then(function (data) {
-          return { ok: response.ok, data: data };
-        });
-      })
-      .then(function (result) {
-        if (result.ok && result.data.success) {
-          mostrarAlerta(
-            '<i class="bi bi-check-circle-fill me-1"></i>Venta #' + result.data.venta_id + ' registrada correctamente. Total: ' + formatMoney(parseFloat(result.data.total)),
-            'success'
-          );
-          carrito = {};
-          renderCarrito();
-        } else {
-          mostrarAlerta('<i class="bi bi-exclamation-triangle-fill me-1"></i>' + (result.data.error || 'No se pudo registrar la venta.'), 'danger');
-          confirmarBtn.disabled = false;
-        }
-      })
-      .catch(function () {
-        mostrarAlerta('<i class="bi bi-exclamation-triangle-fill me-1"></i>Error de conexión al confirmar la venta. Intenta de nuevo.', 'danger');
-        confirmarBtn.disabled = false;
-      })
-      .finally(function () {
-        confirmarBtn.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i>Confirmar venta';
+    document.querySelectorAll(".producto-card").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var id = btn.dataset.productoId;
+        var nombre = btn.dataset.productoNombre;
+        var precio = parseFloat(btn.dataset.productoPrecio);
+        agregarProducto(id, nombre, precio);
       });
-  });
+    });
 
-  renderCarrito();
-})();
+    function mostrarAlerta(mensaje, tipo) {
+      var alertEl = document.createElement("div");
+      alertEl.className =
+        "alert alert-" + tipo + " alert-dismissible fade show";
+      alertEl.setAttribute("role", "alert");
+      alertEl.innerHTML =
+        mensaje +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>';
+      alertContainer.appendChild(alertEl);
+      setTimeout(function () {
+        alertEl.remove();
+      }, 7000);
+    }
+
+    confirmarBtn.addEventListener("click", function () {
+      var ids = Object.keys(carrito);
+      if (ids.length === 0) return;
+
+      var items = ids.map(function (id) {
+        return {
+          producto_id: parseInt(id, 10),
+          cantidad: carrito[id].cantidad,
+        };
+      });
+
+      confirmarBtn.disabled = true;
+      confirmarBtn.innerHTML =
+        '<i class="bi bi-hourglass-split me-1"></i>Procesando...';
+
+      fetch(confirmarUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": csrftoken,
+        },
+        body: JSON.stringify({ items: items }),
+      })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            return { ok: response.ok, data: data };
+          });
+        })
+        .then(function (result) {
+          if (result.ok && result.data.success) {
+            mostrarAlerta(
+              '<i class="bi bi-check-circle-fill me-1"></i>Venta #' +
+                result.data.venta_id +
+                " registrada correctamente. Total: " +
+                formatMoney(parseFloat(result.data.total)),
+              "success",
+            );
+            carrito = {};
+            renderCarrito();
+          } else {
+            mostrarAlerta(
+              '<i class="bi bi-exclamation-triangle-fill me-1"></i>' +
+                (result.data.error || "No se pudo registrar la venta."),
+              "danger",
+            );
+            confirmarBtn.disabled = false;
+          }
+        })
+        .catch(function () {
+          mostrarAlerta(
+            '<i class="bi bi-exclamation-triangle-fill me-1"></i>Error de conexión al confirmar la venta. Intenta de nuevo.',
+            "danger",
+          );
+          confirmarBtn.disabled = false;
+        })
+        .finally(function () {
+          confirmarBtn.innerHTML =
+            '<i class="bi bi-check-circle-fill me-1"></i>Confirmar venta';
+        });
+    });
+
+    renderCarrito();
+  })();
 </script>
 {% endblock %}
