@@ -19,4 +19,7 @@ urlpatterns = [
 
     path('mermas/nueva/', views.MermaCreateView.as_view(), name='merma_create'),
     path('mermas/', views.MermaListView.as_view(), name='merma_list'),
+
+    path('ventas/', views.VentaListView.as_view(), name='venta_list'),
+    path('ventas/<int:pk>/', views.VentaDetailView.as_view(), name='venta_detail'),
 ]

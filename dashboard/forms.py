@@ -1,7 +1,10 @@
 from django import forms
+from django.contrib.auth import get_user_model
 from django.forms import inlineformset_factory
 
 from core.models import Insumo, Merma, Producto, RecetaInsumo
+
+User = get_user_model()
 
 
 class InsumoForm(forms.ModelForm):
@@ -46,6 +49,26 @@ class MermaFilterForm(forms.Form):
         super().__init__(*args, **kwargs)
         self.fields['insumo'].widget.attrs['class'] = 'form-select form-select-sm'
         self.fields['causa'].widget.attrs['class'] = 'form-select form-select-sm'
+        self.fields['fecha_desde'].widget.attrs['class'] = 'form-control form-control-sm'
+        self.fields['fecha_hasta'].widget.attrs['class'] = 'form-control form-control-sm'
+
+
+class VentaFilterForm(forms.Form):
+    usuario_cajero = forms.ModelChoiceField(
+        queryset=User.objects.filter(groups__name='Cajero').order_by('username'),
+        required=False,
+        label='Cajero',
+    )
+    fecha_desde = forms.DateField(
+        required=False, label='Desde', widget=forms.DateInput(attrs={'type': 'date'})
+    )
+    fecha_hasta = forms.DateField(
+        required=False, label='Hasta', widget=forms.DateInput(attrs={'type': 'date'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['usuario_cajero'].widget.attrs['class'] = 'form-select form-select-sm'
         self.fields['fecha_desde'].widget.attrs['class'] = 'form-control form-control-sm'
         self.fields['fecha_hasta'].widget.attrs['class'] = 'form-control form-control-sm'
 

@@ -4,12 +4,14 @@ import json
 from django.contrib import messages
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import ProtectedError, Sum
+from django.db.models import Count, ProtectedError, Sum
 from django.db.models.functions import TruncDate
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from django.views.generic import CreateView, DeleteView, ListView, TemplateView, UpdateView
+from django.views.generic import (
+    CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView,
+)
 
 from core.mixins import GroupRequiredMixin
 from core.models import DetalleVenta, Insumo, Merma, Producto, Venta
@@ -21,6 +23,7 @@ from .forms import (
     MermaForm,
     ProductoForm,
     RecetaInsumoFormSet,
+    VentaFilterForm,
 )
 
 
@@ -310,3 +313,55 @@ class MermaListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context['filter_form'] = MermaFilterForm(self.request.GET or None)
         return context
+
+
+# ---------------------------------------------------------------------------
+# Venta (historial)
+# ---------------------------------------------------------------------------
+
+class VentaListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
+    model = Venta
+    template_name = 'dashboard/venta_list.html'
+    context_object_name = 'ventas'
+    paginate_by = 20
+    allowed_groups = ['Administrador']
+
+    def get_queryset(self):
+        queryset = (
+            Venta.objects.select_related('usuario_cajero')
+            .annotate(num_productos=Count('detalles__producto', distinct=True))
+            .order_by('-fecha')
+        )
+        form = VentaFilterForm(self.request.GET or None)
+        if form.is_valid():
+            data = form.cleaned_data
+            if data.get('usuario_cajero'):
+                queryset = queryset.filter(usuario_cajero=data['usuario_cajero'])
+            if data.get('fecha_desde'):
+                inicio = timezone.make_aware(
+                    datetime.datetime.combine(data['fecha_desde'], datetime.time.min)
+                )
+                queryset = queryset.filter(fecha__gte=inicio)
+            if data.get('fecha_hasta'):
+                fin = timezone.make_aware(
+                    datetime.datetime.combine(data['fecha_hasta'], datetime.time.max)
+                )
+                queryset = queryset.filter(fecha__lte=fin)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = VentaFilterForm(self.request.GET or None)
+        return context
+
+
+class VentaDetailView(GroupRequiredMixin, DetailView):
+    model = Venta
+    template_name = 'dashboard/venta_detail.html'
+    context_object_name = 'venta'
+    allowed_groups = ['Administrador']
+
+    def get_queryset(self):
+        return Venta.objects.select_related('usuario_cajero').prefetch_related(
+            'detalles__producto'
+        )

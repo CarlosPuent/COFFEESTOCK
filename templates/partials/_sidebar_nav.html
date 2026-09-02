@@ -17,6 +17,11 @@
       </a>
     </li>
     <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'venta' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:venta_list' %}">
+        <i class="bi bi-receipt"></i> Ventas
+      </a>
+    </li>
+    <li class="nav-item">
       <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'merma_list' %}active{% endif %}" href="{% url 'dashboard:merma_list' %}">
         <i class="bi bi-exclamation-triangle"></i> Mermas
       </a>
