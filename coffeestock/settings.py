@@ -54,7 +54,7 @@ CRISPY_ALLOWED_TEMPLATE_PACKS = 'bootstrap5'
 CRISPY_TEMPLATE_PACK = 'bootstrap5'
 
 LOGIN_URL = 'core:login'
-LOGIN_REDIRECT_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'core:root'
 LOGOUT_REDIRECT_URL = 'core:login'
 
 MESSAGE_TAGS = {

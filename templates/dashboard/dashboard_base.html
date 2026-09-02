@@ -6,10 +6,10 @@
   <nav class="sidebar d-none d-md-flex flex-column p-3">
     {% if is_administrador %}
       <a href="{% url 'dashboard:index' %}" class="d-block mb-4 text-decoration-none">
-        <span class="brand-logo">☕ CoffeeStock</span>
+        <span class="brand-logo"><i class="bi bi-cup-hot"></i> CoffeeStock</span>
       </a>
     {% else %}
-      <span class="d-block mb-4"><span class="brand-logo">☕ CoffeeStock</span></span>
+      <span class="d-block mb-4"><span class="brand-logo"><i class="bi bi-cup-hot"></i> CoffeeStock</span></span>
     {% endif %}
     {% include 'partials/_sidebar_nav.html' %}
   </nav>
@@ -17,7 +17,7 @@
   <!-- Sidebar en offcanvas (móvil/tablet) -->
   <div class="offcanvas offcanvas-start sidebar-offcanvas" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel">
     <div class="offcanvas-header">
-      <span class="brand-logo" id="sidebarOffcanvasLabel">☕ CoffeeStock</span>
+      <span class="brand-logo" id="sidebarOffcanvasLabel"><i class="bi bi-cup-hot"></i> CoffeeStock</span>
       <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
     </div>
     <div class="offcanvas-body d-flex flex-column pt-0">
@@ -30,7 +30,7 @@
       <button class="btn btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
         <i class="bi bi-list fs-4"></i>
       </button>
-      <span class="fw-bold" style="color: var(--coffee-dark);">☕ CoffeeStock</span>
+      <span class="fw-bold" style="color: var(--coffee-dark);"><i class="bi bi-cup-hot"></i> CoffeeStock</span>
       <span style="width: 42px;"></span>
     </div>
 

@@ -45,6 +45,10 @@ a:hover {
 .brand-logo:hover {
   color: #fff;
 }
+.brand-logo i {
+  font-size: 1.05em;
+  vertical-align: -0.08em;
+}
 
 /* ---------- Barras oscuras (header POS, sidebar, topbar mobile) ---------- */
 
@@ -214,9 +218,9 @@ a:hover {
 
 .producto-imagen-placeholder {
   height: 120px;
-  font-size: 3rem;
+  font-size: 2.75rem;
   background-color: var(--coffee-bg);
-  color: var(--coffee-cream);
+  color: var(--coffee-muted);
 }
 
 .pos-sidebar-cart {

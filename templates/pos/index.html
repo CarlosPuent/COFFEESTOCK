@@ -6,12 +6,11 @@
     class="app-header d-flex flex-wrap justify-content-between align-items-center px-3 py-2 gap-2"
   >
     <span class="brand-logo"
-      >CoffeeStock <small class="fw-normal opacity-75">POS</small></span
+      ><i class="bi bi-cup-hot"></i> CoffeeStock <small class="fw-normal opacity-75">POS</small></span
     >
     <div class="d-flex align-items-center gap-2 flex-wrap">
       <span class="d-none d-sm-inline"
-        ><i class="bi bi-person-circle me-1"></i>{{ request.user.get_username
-        }}</span
+        ><i class="bi bi-person-circle me-1"></i>{{ request.user.get_username }}</span
       >
       <a
         href="{% url 'dashboard:merma_create' %}"
@@ -66,7 +65,13 @@
             <div
               class="w-100 rounded mb-2 d-flex align-items-center justify-content-center producto-imagen-placeholder"
             >
-              ☕
+              {% if producto.categoria == 'bebida' %}
+              <i class="bi bi-cup-hot"></i>
+              {% elif producto.categoria == 'repostería' %}
+              <i class="bi bi-cake2"></i>
+              {% else %}
+              <i class="bi bi-shop"></i>
+              {% endif %}
             </div>
             {% endif %}
             <div class="fw-bold">{{ producto.nombre }}</div>
