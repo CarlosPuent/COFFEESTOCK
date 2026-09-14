@@ -1,0 +1,27 @@
+{% comment %}
+Bloque de estado vacío, consistente en todo el sistema.
+
+Parámetros:
+  icono          clase de Bootstrap Icons (ej. "bi-box-seam")
+  titulo         mensaje principal
+  texto          (opcional) sugerencia o aclaración
+  url_accion     (opcional) destino del botón; resolver antes con {% url ... as var %}
+  etiqueta_accion, icono_accion  (opcionales) texto e ícono del botón
+  compacto       (opcional) versión reducida, para tarjetas pequeñas
+
+Uso:
+  {% url 'dashboard:insumo_create' as crear_url %}
+  {% include 'partials/_estado_vacio.html' with icono="bi-box-seam" titulo="Aún no hay insumos" texto="..." url_accion=crear_url etiqueta_accion="Agregar el primero" icono_accion="bi-plus-lg" %}
+{% endcomment %}
+<div class="estado-vacio{% if compacto %} estado-vacio-compacto{% endif %}">
+  <i class="bi {{ icono|default:'bi-inbox' }} estado-vacio-icono"></i>
+  <p class="estado-vacio-titulo">{{ titulo }}</p>
+  {% if texto %}
+    <p class="estado-vacio-texto">{{ texto }}</p>
+  {% endif %}
+  {% if url_accion and etiqueta_accion %}
+    <a href="{{ url_accion }}" class="btn btn-primary estado-vacio-accion">
+      {% if icono_accion %}<i class="bi {{ icono_accion }} me-1"></i>{% endif %}{{ etiqueta_accion }}
+    </a>
+  {% endif %}
+</div>

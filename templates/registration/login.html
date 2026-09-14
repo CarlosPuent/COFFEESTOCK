@@ -1,35 +1,53 @@
-{% extends 'base.html' %} {% load crispy_forms_tags %} {% block title %}Iniciar
-sesión - CoffeeStock{% endblock %} {% block content %}
-<div
-  class="login-page container d-flex justify-content-center align-items-center"
->
-  <div class="card login-card shadow-sm" style="width: 100%; max-width: 400px">
-    <div class="card-body p-4">
-      <div class="text-center mb-4">
-        <span
-          class="d-inline-block px-3 py-2 rounded-3"
-          style="background-color: var(--coffee-dark)"
-        >
-          <span class="brand-logo"><i class="bi bi-cup-hot"></i> CoffeeStock</span>
-        </span>
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Iniciar sesión - CoffeeStock{% endblock %}
+
+{% block content %}
+<div class="login-layout">
+  <!-- Columna de marca (solo desktop) -->
+  <aside class="login-brand d-none d-lg-flex flex-column justify-content-center">
+    <i class="bi bi-cup-hot login-brand-icon"></i>
+    <div class="login-brand-title">CoffeeStock</div>
+    <p class="login-brand-tagline">
+      Sistema de gestión para cafeterías: inventario, punto de venta y control de mermas en un solo lugar.
+    </p>
+  </aside>
+
+  <!-- Columna del formulario -->
+  <main class="login-form-panel d-flex flex-column justify-content-center">
+    <div class="login-form-inner">
+      <!-- Encabezado compacto de marca (solo móvil/tablet) -->
+      <div class="login-mobile-header d-lg-none text-center mb-4">
+        <div>
+          <i class="bi bi-cup-hot"></i><span class="login-mobile-brand">CoffeeStock</span>
+        </div>
+        <p class="login-mobile-tagline">Sistema de gestión para cafeterías</p>
       </div>
 
-      {% if messages %} {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-      {% endfor %} {% endif %} {% if form.errors %}
-      <div class="alert alert-danger">
-        <i class="bi bi-exclamation-triangle-fill me-1"></i> Usuario o
-        contraseña incorrectos.
-      </div>
+      <h1 class="login-heading">Iniciar sesión</h1>
+      <p class="login-subheading">Ingresa tus credenciales para continuar.</p>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+
+      {% if form.errors %}
+        <div class="alert alert-danger">
+          <i class="bi bi-exclamation-triangle-fill me-1"></i> Usuario o contraseña incorrectos.
+        </div>
       {% endif %}
 
       <form method="post">
-        {% csrf_token %} {{ form|crispy }}
+        {% csrf_token %}
+        {{ form|crispy }}
         <button type="submit" class="btn btn-primary w-100 mt-3">
           <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar
         </button>
       </form>
     </div>
-  </div>
+  </main>
 </div>
 {% endblock %}

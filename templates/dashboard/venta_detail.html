@@ -4,7 +4,7 @@
 
 {% block dashboard_content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-receipt me-2"></i>Venta #{{ venta.id }}</h1>
+  <h1 class="mb-0"><i class="bi bi-receipt me-2"></i>Venta #{{ venta.id }}</h1>
   <a href="{% url 'dashboard:venta_list' %}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Volver al listado
   </a>
@@ -29,7 +29,7 @@
   </div>
 </div>
 
-<h2 class="h5 mb-2"><i class="bi bi-list-ul me-1"></i>Productos vendidos</h2>
+<h2 class="mb-2"><i class="bi bi-list-ul me-1"></i>Productos vendidos</h2>
 <div class="table-responsive">
   <table class="table table-bordered table-hover align-middle">
     <thead>

@@ -4,7 +4,7 @@
 {% block title %}{% if object %}Editar insumo{% else %}Nuevo insumo{% endif %} - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<h1 class="h3 mb-3"><i class="bi bi-box-seam me-2"></i>{% if object %}Editar insumo{% else %}Nuevo insumo{% endif %}</h1>
+<h1 class="mb-3"><i class="bi bi-box-seam me-2"></i>{% if object %}Editar insumo{% else %}Nuevo insumo{% endif %}</h1>
 
 <form method="post">
   {% csrf_token %}

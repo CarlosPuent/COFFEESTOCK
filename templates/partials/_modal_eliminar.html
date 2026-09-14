@@ -1,0 +1,61 @@
+{% comment %}
+Modal de confirmación de borrado, uno solo por página.
+Se puebla dinámicamente con los data-* del botón que lo abre, así que no hace
+falta un modal por fila. El envío sigue siendo un POST normal a la DeleteView
+correspondiente (la misma que ya maneja ProtectedError).
+
+Uso:
+  {% include 'partials/_modal_eliminar.html' with titulo="Eliminar insumo" %}
+{% endcomment %}
+<div
+  class="modal fade"
+  id="modalEliminar"
+  tabindex="-1"
+  aria-labelledby="modalEliminarTitulo"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalEliminarTitulo">
+          <i class="bi bi-exclamation-triangle me-2"></i>{{ titulo|default:"Confirmar eliminación" }}
+        </h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">
+          ¿Seguro que deseas eliminar <strong id="modalEliminarNombre"></strong>?
+          Esta acción no se puede deshacer.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+          <i class="bi bi-x-lg me-1"></i>Cancelar
+        </button>
+        <form method="post" id="modalEliminarForm" class="d-inline mb-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash3 me-1"></i>Eliminar
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var modal = document.getElementById("modalEliminar");
+    if (!modal) return;
+    var nombreEl = document.getElementById("modalEliminarNombre");
+    var formEl = document.getElementById("modalEliminarForm");
+
+    // Bootstrap pasa en relatedTarget el botón que abrió el modal.
+    modal.addEventListener("show.bs.modal", function (evento) {
+      var boton = evento.relatedTarget;
+      if (!boton) return;
+      nombreEl.textContent = boton.dataset.eliminarNombre || "";
+      formEl.action = boton.dataset.eliminarUrl || "";
+    });
+  })();
+</script>

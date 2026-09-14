@@ -4,7 +4,7 @@
 
 {% block dashboard_content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-box-seam me-2"></i>Insumos</h1>
+  <h1 class="mb-0"><i class="bi bi-box-seam me-2"></i>Insumos</h1>
   <a href="{% url 'dashboard:insumo_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo insumo</a>
 </div>
 
@@ -17,37 +17,54 @@
   </div>
 </form>
 
-<div class="table-responsive">
-  <table class="table table-bordered table-hover align-middle">
-    <thead>
-      <tr>
-        <th>Nombre</th>
-        <th>Unidad</th>
-        <th>Stock actual</th>
-        <th>Stock mínimo</th>
-        <th>Activo</th>
-        <th class="text-end">Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for insumo in insumos %}
-        <tr class="{% if insumo.stock_actual < insumo.stock_minimo %}table-danger{% endif %}">
-          <td>{{ insumo.nombre }}</td>
-          <td>{{ insumo.get_unidad_medida_display }}</td>
-          <td>{{ insumo.stock_actual }}</td>
-          <td>{{ insumo.stock_minimo }}</td>
-          <td>{% if insumo.activo %}Sí{% else %}No{% endif %}</td>
-          <td class="text-end">
-            <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i></a>
-            <a href="{% url 'dashboard:insumo_delete' insumo.pk %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash3"></i></a>
-          </td>
+{% if insumos %}
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Unidad</th>
+          <th>Stock actual</th>
+          <th>Stock mínimo</th>
+          <th>Activo</th>
+          <th class="text-end">Acciones</th>
         </tr>
-      {% empty %}
-        <tr><td colspan="6" class="text-center text-muted">No hay insumos registrados.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+      </thead>
+      <tbody>
+        {% for insumo in insumos %}
+          <tr class="{% if insumo.stock_actual < insumo.stock_minimo %}table-danger{% endif %}">
+            <td>{{ insumo.nombre }}</td>
+            <td>{{ insumo.get_unidad_medida_display }}</td>
+            <td>{{ insumo.stock_actual }}</td>
+            <td>{{ insumo.stock_minimo }}</td>
+            <td>{% if insumo.activo %}<span class="badge-estado badge-estado-si">Sí</span>{% else %}<span class="badge-estado badge-estado-no">No</span>{% endif %}</td>
+            <td class="text-end">
+              <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i></a>
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-danger"
+                data-bs-toggle="modal"
+                data-bs-target="#modalEliminar"
+                data-eliminar-url="{% url 'dashboard:insumo_delete' insumo.pk %}"
+                data-eliminar-nombre="{{ insumo.nombre }}"
+                aria-label="Eliminar {{ insumo.nombre }}"
+              ><i class="bi bi-trash3"></i></button>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 
-{% include 'dashboard/_pagination.html' %}
+  {% include 'dashboard/_pagination.html' %}
+{% else %}
+  {% if querystring %}
+    {% include 'partials/_estado_vacio.html' with icono="bi-search" titulo="Sin resultados" texto="Ningún insumo coincide con la búsqueda. Prueba con otro nombre o límpiala para ver todo el inventario." %}
+  {% else %}
+    {% url 'dashboard:insumo_create' as crear_url %}
+    {% include 'partials/_estado_vacio.html' with icono="bi-box-seam" titulo="Aún no hay insumos" texto="Los insumos son la materia prima que consumen tus productos. Registra el primero para empezar a controlar el stock." url_accion=crear_url etiqueta_accion="Agrega tu primer insumo" icono_accion="bi-plus-lg" %}
+  {% endif %}
+{% endif %}
+
+{% include 'partials/_modal_eliminar.html' with titulo="Eliminar insumo" %}
 {% endblock %}

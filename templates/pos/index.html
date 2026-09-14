@@ -37,73 +37,117 @@
 
   <div id="pos-alert-container" class="px-3 pt-2"></div>
 
-  <div class="flex-grow-1 d-flex flex-column flex-lg-row overflow-hidden">
-    <div class="flex-grow-1 overflow-auto p-3" id="productos-panel">
-      {% regroup productos by categoria as categoria_list %}
-      {% for categoria in categoria_list %}
-      <h2 class="h5 mt-2" style="color: var(--coffee-dark)">
-        {{ categoria.list.0.get_categoria_display }}
-      </h2>
-      <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 mb-4">
-        {% for producto in categoria.list %}
-        <div class="col">
+  <div class="flex-grow-1 d-flex flex-column flex-md-row overflow-hidden">
+    <div class="flex-grow-1 overflow-auto" id="productos-panel">
+      <div class="pos-toolbar">
+        <div class="pos-search">
+          <i class="bi bi-search pos-search-icon"></i>
+          <input
+            type="text"
+            id="producto-buscador"
+            class="form-control pos-search-input"
+            placeholder="Buscar producto por nombre…"
+            autocomplete="off"
+            aria-label="Buscar producto por nombre"
+          />
           <button
             type="button"
-            class="btn w-100 h-100 p-2 producto-card text-start"
-            data-producto-id="{{ producto.id }}"
-            data-producto-nombre="{{ producto.nombre }}"
-            data-producto-precio="{{ producto.precio_venta }}"
+            id="limpiar-busqueda"
+            class="pos-search-clear"
+            aria-label="Limpiar búsqueda"
+            hidden
           >
-            {% if producto.imagen %}
-            <img
-              src="{{ producto.imagen.url }}"
-              alt="{{ producto.nombre }}"
-              class="w-100 rounded mb-2"
-              style="height: 120px; object-fit: cover"
-            />
-            {% else %}
-            <div
-              class="w-100 rounded mb-2 d-flex align-items-center justify-content-center producto-imagen-placeholder"
-            >
-              {% if producto.categoria == 'bebida' %}
-              <i class="bi bi-cup-hot"></i>
-              {% elif producto.categoria == 'repostería' %}
-              <i class="bi bi-cake2"></i>
-              {% else %}
-              <i class="bi bi-shop"></i>
-              {% endif %}
-            </div>
-            {% endif %}
-            <div class="fw-bold">{{ producto.nombre }}</div>
-            <div class="producto-precio">${{ producto.precio_venta }}</div>
+            <i class="bi bi-x-lg"></i>
           </button>
         </div>
-        {% endfor %}
+
+        <div class="pos-tabs" id="pos-tabs">
+          <button type="button" class="pos-tab active" data-categoria="todas">
+            Todas
+          </button>
+          {% regroup productos by categoria as categoria_list %}
+          {% for categoria in categoria_list %}
+          <button
+            type="button"
+            class="pos-tab"
+            data-categoria="{{ categoria.grouper }}"
+          >
+            {{ categoria.list.0.get_categoria_display }}
+          </button>
+          {% endfor %}
+        </div>
       </div>
-      {% empty %}
-      <p class="text-muted">
-        <i class="bi bi-inbox me-1"></i>No hay productos activos disponibles.
-      </p>
-      {% endfor %}
+
+      <div class="pos-productos-wrap">
+        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3" id="productos-grid">
+          {% for producto in productos %}
+          <div
+            class="col producto-col"
+            data-categoria="{{ producto.categoria }}"
+            data-nombre="{{ producto.nombre|lower }}"
+          >
+            <button
+              type="button"
+              class="btn w-100 h-100 p-2 producto-card text-start"
+              data-producto-id="{{ producto.id }}"
+              data-producto-nombre="{{ producto.nombre }}"
+              data-producto-precio="{{ producto.precio_venta }}"
+            >
+              {% if producto.imagen %}
+              <img
+                src="{{ producto.imagen.url }}"
+                alt="{{ producto.nombre }}"
+                class="w-100 rounded mb-2 producto-imagen"
+              />
+              {% else %}
+              <div
+                class="w-100 rounded mb-2 d-flex align-items-center justify-content-center producto-imagen-placeholder"
+              >
+                {% if producto.categoria == 'bebida' %}
+                <i class="bi bi-cup-hot"></i>
+                {% elif producto.categoria == 'repostería' %}
+                <i class="bi bi-cake2"></i>
+                {% else %}
+                <i class="bi bi-shop"></i>
+                {% endif %}
+              </div>
+              {% endif %}
+              <div class="fw-bold">{{ producto.nombre }}</div>
+              <div class="producto-precio">${{ producto.precio_venta }}</div>
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if not productos %}
+        {% include 'partials/_estado_vacio.html' with icono="bi-inbox" titulo="No hay productos disponibles" texto="No hay productos activos para vender. Un administrador puede darlos de alta desde el panel." %}
+        {% endif %}
+
+        <div id="sin-resultados" hidden>
+          {% include 'partials/_estado_vacio.html' with icono="bi-search" titulo="Sin resultados" texto="Ningún producto coincide con la búsqueda. Revisa el nombre o limpia el buscador." %}
+        </div>
+      </div>
     </div>
 
-    <aside
-      class="pos-sidebar-cart p-3 d-flex flex-column"
-      style="width: 100%; max-width: 400px; flex-shrink: 0"
-    >
-      <h2 class="h5"><i class="bi bi-cart3 me-1"></i>Carrito</h2>
+    <aside class="pos-sidebar-cart p-3 d-flex flex-column" id="panel-carrito">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="mb-0"><i class="bi bi-cart3 me-1"></i>Carrito</h2>
+        <button
+          type="button"
+          class="btn-cerrar-carrito"
+          id="cerrar-carrito"
+          aria-label="Cerrar carrito"
+        >
+          <i class="bi bi-chevron-down"></i>
+        </button>
+      </div>
       <div class="flex-grow-1 overflow-auto" id="carrito-lista">
-        <p class="text-muted" id="carrito-vacio-msg">El carrito está vacío.</p>
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-cart3" titulo="El carrito está vacío" texto="Toca un producto del catálogo para agregarlo a la venta." %}
       </div>
       <div class="border-top pt-3 mt-2">
         <div class="d-flex justify-content-between align-items-center">
-          <span class="h5 mb-0">Total</span>
-          <span
-            class="h4 mb-0"
-            id="carrito-total"
-            style="color: var(--coffee-dark)"
-            >$0.00</span
-          >
+          <span class="carrito-total-label">Total</span>
+          <span class="carrito-total-valor" id="carrito-total">$0.00</span>
         </div>
         <button
           type="button"
@@ -116,17 +160,172 @@
       </div>
     </aside>
   </div>
+
+  <!-- Acceso al carrito en móvil (bottom sheet) -->
+  <div class="pos-cart-backdrop" id="pos-cart-backdrop" hidden></div>
+  <button type="button" class="pos-fab-carrito" id="fab-carrito">
+    <span
+      ><i class="bi bi-cart3 me-2"></i>Ver carrito (<span id="fab-carrito-count">0</span>)</span
+    >
+    <span class="pos-fab-total" id="fab-carrito-total">$0.00</span>
+  </button>
 </div>
+
+<div class="pos-toast-container" id="pos-toast-container" aria-live="polite" aria-atomic="true"></div>
 
 <script>
   (function () {
     var carrito = {};
 
     var carritoListaEl = document.getElementById("carrito-lista");
+    // El bloque de "carrito vacío" ya viene renderizado desde el template:
+    // se guarda para reponerlo sin duplicar su markup aquí.
+    var carritoVacioHTML = carritoListaEl.innerHTML;
     var carritoTotalEl = document.getElementById("carrito-total");
     var confirmarBtn = document.getElementById("confirmar-venta-btn");
     var alertContainer = document.getElementById("pos-alert-container");
     var confirmarUrl = '{% url "pos:confirmar_venta" %}';
+
+    /* --- Filtro: búsqueda en vivo + pestañas de categoría (solo presentación) --- */
+    var buscadorInput = document.getElementById("producto-buscador");
+    var limpiarBusquedaBtn = document.getElementById("limpiar-busqueda");
+    var tabsWrapper = document.getElementById("pos-tabs");
+    var sinResultadosEl = document.getElementById("sin-resultados");
+    var productoCols = Array.prototype.slice.call(
+      document.querySelectorAll(".producto-col"),
+    );
+    var categoriaActiva = "todas";
+
+    function normalizar(texto) {
+      return texto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    productoCols.forEach(function (col) {
+      col.dataset.nombreNorm = normalizar(col.dataset.nombre || "");
+      col.dataset.categoriaNorm = normalizar(col.dataset.categoria || "");
+    });
+
+    function aplicarFiltros() {
+      var termino = normalizar(buscadorInput.value.trim());
+      var buscando = termino !== "";
+      var visibles = 0;
+
+      productoCols.forEach(function (col) {
+        // Al buscar, se busca en todo el catálogo, ignorando la pestaña activa.
+        var coincideTexto = !buscando || col.dataset.nombreNorm.indexOf(termino) !== -1;
+        var coincideCategoria =
+          buscando ||
+          categoriaActiva === "todas" ||
+          col.dataset.categoriaNorm === normalizar(categoriaActiva);
+        var visible = coincideTexto && coincideCategoria;
+        col.hidden = !visible;
+        if (visible) visibles += 1;
+      });
+
+      sinResultadosEl.hidden = visibles > 0 || productoCols.length === 0;
+      limpiarBusquedaBtn.hidden = !buscando;
+      tabsWrapper.classList.toggle("pos-tabs-inactivos", buscando);
+    }
+
+    if (buscadorInput) {
+      buscadorInput.addEventListener("input", aplicarFiltros);
+      limpiarBusquedaBtn.addEventListener("click", function () {
+        buscadorInput.value = "";
+        aplicarFiltros();
+        buscadorInput.focus();
+      });
+
+      tabsWrapper.querySelectorAll(".pos-tab").forEach(function (tab) {
+        tab.addEventListener("click", function () {
+          categoriaActiva = tab.dataset.categoria;
+          tabsWrapper.querySelectorAll(".pos-tab").forEach(function (t) {
+            t.classList.toggle("active", t === tab);
+          });
+          // Al elegir una categoría se sale del modo búsqueda.
+          buscadorInput.value = "";
+          aplicarFiltros();
+        });
+      });
+
+      aplicarFiltros();
+    }
+
+    /* --- Feedback visual al agregar (solo presentación) --- */
+    var toastContainer = document.getElementById("pos-toast-container");
+
+    function mostrarToastAgregado(nombre, cantidad) {
+      var toast = document.createElement("div");
+      toast.className = "pos-toast";
+      toast.innerHTML =
+        '<i class="bi bi-check-circle-fill pos-toast-icon"></i><span class="pos-toast-text"></span>';
+      toast.querySelector(".pos-toast-text").textContent =
+        "Agregado: " + nombre + " x" + cantidad;
+      toastContainer.appendChild(toast);
+
+      while (toastContainer.children.length > 3) {
+        toastContainer.removeChild(toastContainer.firstChild);
+      }
+
+      setTimeout(function () {
+        toast.classList.add("saliendo");
+        setTimeout(function () {
+          toast.remove();
+        }, 250);
+      }, 1600);
+    }
+
+    /* --- Carrito como bottom sheet en móvil (solo presentación) --- */
+    var panelCarrito = document.getElementById("panel-carrito");
+    var fabCarrito = document.getElementById("fab-carrito");
+    var fabCount = document.getElementById("fab-carrito-count");
+    var fabTotal = document.getElementById("fab-carrito-total");
+    var cartBackdrop = document.getElementById("pos-cart-backdrop");
+    var cerrarCarritoBtn = document.getElementById("cerrar-carrito");
+
+    function carritoEsSheet() {
+      return window.matchMedia("(max-width: 767.98px)").matches;
+    }
+
+    function abrirCarritoMovil() {
+      panelCarrito.classList.add("abierto");
+      cartBackdrop.hidden = false;
+    }
+
+    function cerrarCarritoMovil() {
+      panelCarrito.classList.remove("abierto");
+      cartBackdrop.hidden = true;
+    }
+
+    function actualizarResumenMovil() {
+      var unidades = Object.keys(carrito).reduce(function (acc, id) {
+        return acc + carrito[id].cantidad;
+      }, 0);
+      fabCount.textContent = unidades;
+      fabTotal.textContent = formatMoney(calcularTotal());
+      // Con el carrito vacío (incluido el post-venta) el sheet se cierra solo.
+      if (unidades === 0) cerrarCarritoMovil();
+    }
+
+    fabCarrito.addEventListener("click", abrirCarritoMovil);
+    cerrarCarritoBtn.addEventListener("click", cerrarCarritoMovil);
+    cartBackdrop.addEventListener("click", cerrarCarritoMovil);
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") cerrarCarritoMovil();
+    });
+    window.addEventListener("resize", function () {
+      if (!carritoEsSheet()) cerrarCarritoMovil();
+    });
+
+    function resaltarLineaCarrito(id) {
+      var linea = carritoListaEl.querySelector('[data-linea-id="' + id + '"]');
+      if (linea) {
+        linea.classList.add("linea-flash");
+        linea.scrollIntoView({ block: "nearest" });
+      }
+    }
 
     function getCookie(name) {
       var cookieValue = null;
@@ -184,34 +383,33 @@
       carritoListaEl.innerHTML = "";
 
       if (ids.length === 0) {
-        var vacioMsg = document.createElement("p");
-        vacioMsg.className = "text-muted";
-        vacioMsg.textContent = "El carrito está vacío.";
-        carritoListaEl.appendChild(vacioMsg);
+        carritoListaEl.innerHTML = carritoVacioHTML;
         confirmarBtn.disabled = true;
       } else {
         ids.forEach(function (id) {
           var linea = carrito[id];
           var row = document.createElement("div");
-          row.className =
-            "d-flex justify-content-between align-items-center border-bottom py-2";
+          row.className = "carrito-linea";
+          row.dataset.lineaId = id;
           row.innerHTML =
-            "<div>" +
-            '<div class="fw-semibold">' +
-            linea.nombre +
-            "</div>" +
-            '<div class="text-muted small">' +
+            '<div class="carrito-linea-info">' +
+            '<div class="carrito-linea-nombre"></div>' +
+            '<div class="carrito-linea-precio">' +
             formatMoney(linea.precio) +
-            " c/u</div>" +
+            " c/u · " +
+            formatMoney(linea.precio * linea.cantidad) +
             "</div>" +
-            '<div class="d-flex align-items-center gap-1">' +
-            '<button type="button" class="btn btn-outline-secondary btn-cart-qty btn-menos">−</button>' +
-            '<span class="fw-bold px-2">' +
+            "</div>" +
+            '<div class="carrito-linea-controles">' +
+            '<button type="button" class="btn btn-outline-secondary btn-cart-qty btn-menos" aria-label="Quitar una unidad">−</button>' +
+            '<span class="carrito-cantidad">' +
             linea.cantidad +
             "</span>" +
-            '<button type="button" class="btn btn-outline-secondary btn-cart-qty btn-mas">+</button>' +
-            '<button type="button" class="btn btn-outline-danger btn-cart-qty btn-quitar"><i class="bi bi-trash"></i></button>' +
+            '<button type="button" class="btn btn-outline-secondary btn-cart-qty btn-mas" aria-label="Agregar una unidad">+</button>' +
+            '<button type="button" class="btn btn-outline-danger btn-cart-qty btn-quitar" aria-label="Quitar del carrito"><i class="bi bi-trash"></i></button>' +
             "</div>";
+
+          row.querySelector(".carrito-linea-nombre").textContent = linea.nombre;
 
           row
             .querySelector(".btn-menos")
@@ -233,6 +431,7 @@
       }
 
       carritoTotalEl.textContent = formatMoney(calcularTotal());
+      actualizarResumenMovil();
     }
 
     document.querySelectorAll(".producto-card").forEach(function (btn) {
@@ -241,6 +440,8 @@
         var nombre = btn.dataset.productoNombre;
         var precio = parseFloat(btn.dataset.productoPrecio);
         agregarProducto(id, nombre, precio);
+        resaltarLineaCarrito(id);
+        mostrarToastAgregado(nombre, carrito[id].cantidad);
       });
     });
 

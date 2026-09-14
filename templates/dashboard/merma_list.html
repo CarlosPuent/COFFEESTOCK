@@ -4,7 +4,7 @@
 
 {% block dashboard_content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <h1 class="h3 mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Mermas</h1>
+  <h1 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Mermas</h1>
   <a href="{% url 'dashboard:merma_create' %}" class="btn btn-primary"><i class="bi bi-clipboard2-plus me-1"></i>Registrar merma</a>
 </div>
 
@@ -31,34 +31,43 @@
   </div>
 </form>
 
-<div class="table-responsive">
-  <table class="table table-bordered table-hover align-middle">
-    <thead>
-      <tr>
-        <th>Insumo</th>
-        <th>Cantidad</th>
-        <th>Causa</th>
-        <th>Responsable</th>
-        <th>Fecha</th>
-        <th>Observación</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for merma in mermas %}
+{% if mermas %}
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle">
+      <thead>
         <tr>
-          <td>{{ merma.insumo }}</td>
-          <td>{{ merma.cantidad }}</td>
-          <td>{{ merma.get_causa_display }}</td>
-          <td>{{ merma.usuario_responsable.get_username }}</td>
-          <td>{{ merma.fecha|date:"d/m/Y H:i" }}</td>
-          <td>{{ merma.observacion|default:"—" }}</td>
+          <th>Insumo</th>
+          <th>Cantidad</th>
+          <th>Causa</th>
+          <th>Responsable</th>
+          <th>Fecha</th>
+          <th>Observación</th>
         </tr>
-      {% empty %}
-        <tr><td colspan="6" class="text-center text-muted">No hay mermas registradas.</td></tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+      </thead>
+      <tbody>
+        {% for merma in mermas %}
+          <tr>
+            <td>{{ merma.insumo }}</td>
+            <td>{{ merma.cantidad }}</td>
+            <td>{{ merma.get_causa_display }}</td>
+            <td>{{ merma.usuario_responsable.get_username }}</td>
+            <td>{{ merma.fecha|date:"d/m/Y H:i" }}</td>
+            <td>{{ merma.observacion|default:"—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% include 'dashboard/_pagination.html' %}
+{% else %}
+  {% if querystring %}
+    {% include 'partials/_estado_vacio.html' with icono="bi-funnel" titulo="Sin resultados" texto="Ninguna merma coincide con los filtros aplicados. Ajusta el rango de fechas, el insumo o la causa." %}
+  {% else %}
+    {% url 'dashboard:merma_create' as crear_url %}
+    {% include 'partials/_estado_vacio.html' with icono="bi-clipboard2-check" titulo="Sin mermas registradas" texto="Aquí aparecerá el historial de insumos dados de baja por caducidad, mala preparación u otra causa." url_accion=crear_url etiqueta_accion="Registrar una merma" icono_accion="bi-clipboard2-plus" %}
+  {% endif %}
+{% endif %}
 
 {% include 'dashboard/_pagination.html' %}
 {% endblock %}

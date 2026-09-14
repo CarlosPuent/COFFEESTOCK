@@ -3,7 +3,7 @@
 {% block title %}Dashboard - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<h1 class="h3 mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+<h1 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
 
 <section class="mb-4">
   {% if insumos_alerta %}
@@ -29,11 +29,11 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-body">
-        <h2 class="h5"><i class="bi bi-graph-up-arrow me-1"></i>Ventas de los últimos 7 días</h2>
+        <h2><i class="bi bi-graph-up-arrow me-1"></i>Ventas de los últimos 7 días</h2>
         {% if ventas_has_data %}
           <div class="chart-wrapper"><canvas id="chart-ventas"></canvas></div>
         {% else %}
-          <p class="text-muted mb-0">Sin datos disponibles.</p>
+          {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-graph-up" titulo="Sin ventas en el periodo" texto="Aquí verás la evolución de ventas cuando se registren en los últimos 7 días." %}
         {% endif %}
       </div>
     </div>
@@ -42,11 +42,11 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-body">
-        <h2 class="h5"><i class="bi bi-bar-chart-fill me-1"></i>Top 5 productos más vendidos (30 días)</h2>
+        <h2><i class="bi bi-bar-chart-fill me-1"></i>Top 5 productos más vendidos (30 días)</h2>
         {% if productos_has_data %}
           <div class="chart-wrapper"><canvas id="chart-productos"></canvas></div>
         {% else %}
-          <p class="text-muted mb-0">Sin datos disponibles.</p>
+          {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-bar-chart" titulo="Sin productos vendidos" texto="El ranking aparecerá cuando haya ventas en los últimos 30 días." %}
         {% endif %}
       </div>
     </div>
@@ -55,11 +55,11 @@
   <div class="col">
     <div class="card h-100">
       <div class="card-body">
-        <h2 class="h5"><i class="bi bi-pie-chart-fill me-1"></i>Mermas del mes por causa</h2>
+        <h2><i class="bi bi-pie-chart-fill me-1"></i>Mermas del mes por causa</h2>
         {% if mermas_has_data %}
           <div class="chart-wrapper"><canvas id="chart-mermas"></canvas></div>
         {% else %}
-          <p class="text-muted mb-0">Sin datos disponibles.</p>
+          {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-clipboard2-check" titulo="Sin mermas este mes" texto="Buena señal: no se ha dado de baja ningún insumo en el mes en curso." %}
         {% endif %}
       </div>
     </div>
@@ -78,8 +78,8 @@
       datasets: [{
         label: 'Total vendido',
         data: ventasData.data,
-        borderColor: '#6F4E37',
-        backgroundColor: 'rgba(111, 78, 55, 0.15)',
+        borderColor: '#A9793F',
+        backgroundColor: 'rgba(169, 121, 63, 0.15)',
         tension: 0.3,
         fill: true,
       }],
@@ -102,7 +102,7 @@
       datasets: [{
         label: 'Cantidad vendida',
         data: productosData.data,
-        backgroundColor: '#C8A97E',
+        backgroundColor: '#A9793F',
       }],
     },
     options: {
@@ -122,7 +122,7 @@
       labels: mermasData.labels,
       datasets: [{
         data: mermasData.data,
-        backgroundColor: ['#b3441e', '#C8A97E', '#8a7460'],
+        backgroundColor: ['#B54B3A', '#A9793F', '#7A6A5C'],
       }],
     },
     options: {
