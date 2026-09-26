@@ -182,3 +182,27 @@ class ProbarCorreoCommandTests(TestCase):
     def test_falla_con_mensaje_claro(self):
         with self.assertRaisesMessage(CommandError, 'SENDGRID_API_KEY'):
             call_command('probar_correo', stdout=mock.Mock())
+
+
+class LeerEnvTests(TestCase):
+    def test_tolera_espacios_sangria_y_bom(self):
+        import os
+        import tempfile
+        from pathlib import Path
+
+        from coffeestock.settings import _leer_env
+
+        with tempfile.TemporaryDirectory() as carpeta:
+            ruta = Path(carpeta) / '.env'
+            ruta.write_text(
+                '﻿PRUEBA_ENV_A = uno\n   PRUEBA_ENV_B=dos\n# PRUEBA_ENV_C=tres\n',
+                encoding='utf-8',
+            )
+            try:
+                _leer_env(ruta)
+                self.assertEqual(os.environ.get('PRUEBA_ENV_A'), 'uno')
+                self.assertEqual(os.environ.get('PRUEBA_ENV_B'), 'dos')
+                self.assertIsNone(os.environ.get('PRUEBA_ENV_C'))
+            finally:
+                for clave in ('PRUEBA_ENV_A', 'PRUEBA_ENV_B'):
+                    os.environ.pop(clave, None)

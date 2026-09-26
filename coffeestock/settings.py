@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
 
+import io
 from pathlib import Path
 
 import environ
@@ -19,7 +20,27 @@ from django.contrib.messages import constants as message_constants
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
-environ.Env.read_env(BASE_DIR / '.env')
+
+
+def _leer_env(ruta):
+    """Lee el .env tolerando lo que suele pasar al editarlo a mano: espacios
+    al inicio de la línea o alrededor del "=" (django-environ ignora esas
+    líneas sin avisar) y la marca BOM que agregan algunos editores."""
+    try:
+        texto = ruta.read_text(encoding='utf-8-sig')
+    except OSError:
+        return
+    lineas = []
+    for linea in texto.splitlines():
+        linea = linea.strip()
+        if '=' in linea and not linea.startswith('#'):
+            clave, valor = linea.split('=', 1)
+            linea = f'{clave.strip()}={valor.strip()}'
+        lineas.append(linea)
+    environ.Env.read_env(io.StringIO('\n'.join(lineas)))
+
+
+_leer_env(BASE_DIR / '.env')
 
 
 # Quick-start development settings - unsuitable for production
