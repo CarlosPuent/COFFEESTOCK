@@ -14,6 +14,7 @@ from django.views.generic import (
 )
 
 from core.mixins import GroupRequiredMixin
+from core.services.alertas import estado_configuracion
 from core.models import DetalleVenta, Insumo, Merma, Producto, Venta
 
 from .forms import (
@@ -35,6 +36,7 @@ class DashboardIndexView(GroupRequiredMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         context['insumos_alerta'] = Insumo.objects.filter(alerta_pendiente=True).order_by('nombre')
+        context['estado_correo'] = estado_configuracion()
 
         hoy = timezone.localdate()
 
@@ -153,20 +155,26 @@ class InsumoListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
         return context
 
 
-class InsumoCreateView(GroupRequiredMixin, CreateView):
+class InsumoFormMixin:
     model = Insumo
     form_class = InsumoForm
     template_name = 'dashboard/insumo_form.html'
     success_url = reverse_lazy('dashboard:insumo_list')
     allowed_groups = ['Administrador']
 
+    def form_valid(self, form):
+        with transaction.atomic():
+            response = super().form_valid(form)
+            self.object.sincronizar_alerta()
+        return response
 
-class InsumoUpdateView(GroupRequiredMixin, UpdateView):
-    model = Insumo
-    form_class = InsumoForm
-    template_name = 'dashboard/insumo_form.html'
-    success_url = reverse_lazy('dashboard:insumo_list')
-    allowed_groups = ['Administrador']
+
+class InsumoCreateView(InsumoFormMixin, GroupRequiredMixin, CreateView):
+    pass
+
+
+class InsumoUpdateView(InsumoFormMixin, GroupRequiredMixin, UpdateView):
+    pass
 
 
 class InsumoDeleteView(GroupRequiredMixin, ProtectedDeleteMixin, DeleteView):

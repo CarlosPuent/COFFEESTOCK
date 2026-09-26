@@ -43,16 +43,35 @@ class Insumo(models.Model):
             raise ValueError(
                 f'Stock insuficiente de {insumo.nombre}: disponible {insumo.stock_actual}, requerido {cantidad}'
             )
-        nuevo_stock = insumo.stock_actual - cantidad
-        insumo.stock_actual = nuevo_stock
-        insumo.alerta_pendiente = nuevo_stock <= insumo.stock_minimo
+        insumo.stock_actual -= cantidad
+        insumo.alerta_pendiente = insumo.stock_bajo
         insumo.save(update_fields=['stock_actual', 'alerta_pendiente', 'fecha_actualizacion'])
 
         if insumo.alerta_pendiente:
-            from core.services.alertas import enviar_alerta_stock
-            enviar_alerta_stock(insumo)
+            from core.services.alertas import programar_alerta_stock
+            programar_alerta_stock(insumo.pk)
 
         self.refresh_from_db()
+
+    @property
+    def stock_bajo(self):
+        return self.stock_actual <= self.stock_minimo
+
+    def sincronizar_alerta(self):
+        """Recalcula `alerta_pendiente` después de editar el stock a mano.
+
+        Si el insumo quedó bajo el mínimo, programa el correo. Si se
+        reabasteció, reinicia el cooldown para que la próxima caída avise
+        de inmediato.
+        """
+        self.alerta_pendiente = self.stock_bajo
+        if not self.alerta_pendiente:
+            self.ultima_alerta_enviada = None
+        self.save(update_fields=['alerta_pendiente', 'ultima_alerta_enviada'])
+
+        if self.alerta_pendiente:
+            from core.services.alertas import programar_alerta_stock
+            programar_alerta_stock(self.pk)
 
 
 class Producto(models.Model):

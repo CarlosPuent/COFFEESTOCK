@@ -94,7 +94,7 @@ class Command(BaseCommand):
                     stock_minimo=stock_minimo,
                     costo_unitario=costo,
                     activo=True,
-                    alerta_pendiente=stock_actual < stock_minimo,
+                    alerta_pendiente=stock_actual <= stock_minimo,
                 ),
             )
             insumos[nombre] = insumo
