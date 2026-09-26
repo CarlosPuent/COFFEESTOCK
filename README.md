@@ -7,76 +7,139 @@ Hecho con Django y SQL Server.
 > **Avance 1 de 2.** Lo que falta para la entrega final está al final:
 > [Pendiente para el Avance 2](#pendiente-para-el-avance-2).
 
-**Índice**
+Esta guía es para **Windows**. Sigue los pasos en orden, del 1 al 12, sin
+saltarte ninguno. Cada paso dice qué hacer y qué deberías ver si salió bien.
 
-- [A. Instalar programas (una sola vez)](#a-instalar-programas-una-sola-vez)
-- [B. Empezar desde cero (si ya lo habías intentado)](#b-empezar-desde-cero-si-ya-lo-habías-intentado)
-- [C. Instalar el proyecto, pasos 1 a 7](#c-instalar-el-proyecto)
-- [D. Recibir las alertas en tu correo](#d-recibir-las-alertas-en-tu-correo)
-- [E. Si algo falla](#e-si-algo-falla)
+| Paso | Qué haces | Tiempo aprox. |
+|---|---|---|
+| [1](#paso-1-instalar-los-programas) | Instalar los programas | 20 min (solo la primera vez) |
+| [2](#paso-2-averiguar-el-nombre-de-tu-servidor-sql) | Averiguar el nombre de tu servidor SQL | 2 min |
+| [3](#paso-3-conectarte-con-sql-server-management-studio) | Conectarte con SQL Server Management Studio | 2 min |
+| [4](#paso-4-descargar-el-proyecto) | Descargar el proyecto | 1 min |
+| [5](#paso-5-crear-la-base-de-datos) | Crear la base de datos | 1 min |
+| [6](#paso-6-preparar-python) | Preparar Python | 3 min |
+| [7](#paso-7-crear-el-archivo-de-configuración-env) | Crear el archivo de configuración | 2 min |
+| [8](#paso-8-crear-las-tablas-y-los-datos-de-prueba) | Crear las tablas y los datos de prueba | 1 min |
+| [9](#paso-9-abrir-el-sistema) | Abrir el sistema | 1 min |
+| [10](#paso-10-probar-el-sistema-completo) | Probar el sistema completo | 5 min |
+| [11](#paso-11-recibir-las-alertas-en-tu-correo) | Recibir las alertas en tu correo | 5 min |
+| [12](#paso-12-probar-la-alerta-por-correo) | Probar la alerta por correo | 2 min |
+
+¿Algo falló? Ve a [Si algo falla](#si-algo-falla).
+¿Ya lo habías intentado y quieres empezar limpio? Ve a
+[Empezar desde cero](#empezar-desde-cero).
 
 ---
 
-## A. Instalar programas (una sola vez)
+## Paso 1. Instalar los programas
+
+Instala estos cinco programas. Si ya tienes alguno, sáltalo.
 
 1. **Python 3.12 o más nuevo**: [python.org/downloads](https://www.python.org/downloads/).
-   Al abrir el instalador marca **"Add python.exe to PATH"** (abajo de la
-   ventana) y luego **Install Now**.
-2. **Git**: [git-scm.com/downloads](https://git-scm.com/downloads). Todo con
-   las opciones por defecto.
+   Al abrir el instalador marca la casilla **"Add python.exe to PATH"** (abajo
+   de la ventana) y luego clic en **Install Now**.
+2. **Git**: [git-scm.com/downloads](https://git-scm.com/downloads). Siguiente,
+   siguiente, con todo por defecto.
 3. **SQL Server Express**: [descarga](https://www.microsoft.com/sql-server/sql-server-downloads).
-   Elige la instalación **Basic**.
+   Elige **Express**, luego la instalación **Basic**.
 4. **SQL Server Management Studio (SSMS)**: [descarga](https://learn.microsoft.com/sql/ssms/download-sql-server-management-studio-ssms).
 5. **ODBC Driver 18 for SQL Server**: [descarga](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server).
-   Elige el de Windows **x64**.
-6. **Cierra todas las ventanas de PowerShell** que tengas abiertas. Las que ya
-   estaban abiertas no ven lo que acabas de instalar.
+   Elige el instalador de Windows **x64**.
 
-Para comprobar Python, abre una PowerShell nueva y escribe:
+Cuando termines, **cierra todas las ventanas de PowerShell** que tengas
+abiertas. Las ventanas que ya estaban abiertas no ven lo que acabas de
+instalar.
+
+**Comprueba:** abre una PowerShell nueva (tecla Windows, escribe
+`PowerShell`, Enter) y escribe:
 
 ```powershell
 py --list
 ```
 
-Debe salir una línea con `3.12` o más (por ejemplo `-V:3.13 *`).
+✅ Debe salir una línea con `3.12` o mayor, por ejemplo `-V:3.13 *`.
 
 ---
 
-## B. Empezar desde cero (si ya lo habías intentado)
+## Paso 2. Averiguar el nombre de tu servidor SQL
 
-Salta esta parte si es la primera vez.
+Este es **el dato más importante de toda la instalación**. Lo vas a usar en
+SSMS (paso 3) y en la configuración (paso 7). Si está mal, nada conecta.
 
-**1. Borra la base de datos vieja.** En SSMS: conéctate, clic en **New
-Query**, pega esto y presiona **F5**:
-
-```sql
-USE master;
-GO
-IF DB_ID('CoffeeStockDB') IS NOT NULL
-BEGIN
-    ALTER DATABASE CoffeeStockDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-    DROP DATABASE CoffeeStockDB;
-END
-GO
-```
-
-**2. Borra la carpeta vieja.** Cierra VS Code y cualquier PowerShell que esté
-dentro de la carpeta del proyecto. Abre una PowerShell nueva y escribe:
+En la PowerShell copia y pega esto, y presiona Enter:
 
 ```powershell
-cd C:\
-Remove-Item -Recurse -Force C:\COFFEESTOCK
+Get-Service | Where-Object DisplayName -like 'SQL Server (*' | Select-Object Status, DisplayName
 ```
 
-Si dice que la carpeta no existe, no pasa nada.
+Te sale algo parecido a esto:
+
+```
+ Status DisplayName
+ ------ -----------
+Running SQL Server (SQLEXPRESS)
+```
+
+Busca lo que está **entre paréntesis** y usa esta tabla:
+
+| Si dice… | Tu nombre de servidor es… |
+|---|---|
+| `SQL Server (SQLEXPRESS)` | `localhost\SQLEXPRESS` |
+| `SQL Server (MSSQLSERVER)` | `localhost` |
+| `SQL Server (OTRO_NOMBRE)` | `localhost\OTRO_NOMBRE` |
+
+**Anota tu nombre de servidor.** En el resto de la guía lo llamamos
+**TU_SERVIDOR**.
+
+- Si salen **varias líneas**, tienes varios SQL Server instalados. Elige el que
+  diga `Running`, preferiblemente `SQLEXPRESS`.
+- Si dice **`Stopped`**: el servidor está apagado. Tecla Windows → escribe
+  `Servicios` → abre **Servicios** → busca esa línea (por ejemplo
+  "SQL Server (SQLEXPRESS)") → clic derecho → **Iniciar**.
+- Si **no sale nada**: SQL Server no está instalado. Vuelve al paso 1, punto 3.
+
+> Si usas **LocalDB** (viene con Visual Studio) y no tienes SQL Server
+> Express, tu servidor es `(localdb)\MSSQLLocalDB`. Lo compruebas con
+> `sqllocaldb info`.
 
 ---
 
-## C. Instalar el proyecto
+## Paso 3. Conectarte con SQL Server Management Studio
 
-### Paso 1. Descargar el proyecto
+1. Abre **SQL Server Management Studio** (tecla Windows → escribe `SSMS`).
+2. Aparece la ventana **Connect to Server**. Llénala así:
 
-Abre **PowerShell** y escribe estos comandos (uno, Enter, el siguiente):
+   | Campo | Qué poner |
+   |---|---|
+   | Server type | `Database Engine` |
+   | Server name | **TU_SERVIDOR** (por ejemplo `localhost\SQLEXPRESS`) |
+   | Authentication | `Windows Authentication` |
+   | Encryption | `Optional` (si aparece este campo) |
+   | Trust server certificate | ✔ marcado (si aparece esta casilla) |
+
+3. Clic en **Connect**.
+
+✅ A la izquierda, en **Object Explorer**, aparece tu servidor con una
+carpeta **Databases** debajo.
+
+❌ Si sale un error:
+
+- **"A network-related or instance-specific error"** o **"server was not
+  found"**: el nombre no es correcto o el servidor está apagado. Repite el
+  paso 2.
+- **"certificate chain was issued by an authority that is not trusted"**:
+  marca **Trust server certificate** (clic en **Options >>** si no la ves).
+
+> Si en **Server name** despliegas la lista y eliges **<Browse for more…>** →
+> **Local Servers** → **Database Engine**, SSMS te muestra los servidores
+> instalados en tu computadora. Es otra forma de encontrar TU_SERVIDOR.
+
+---
+
+## Paso 4. Descargar el proyecto
+
+En la PowerShell escribe estos comandos, **uno a la vez** (escribes uno,
+Enter, y luego el siguiente):
 
 ```powershell
 cd C:\
@@ -90,21 +153,32 @@ git clone https://github.com/CarlosPuent/COFFEESTOCK.git
 cd C:\COFFEESTOCK
 ```
 
-### Paso 2. Crear la base de datos
+✅ La línea de la PowerShell ahora dice `PS C:\COFFEESTOCK>`.
 
-1. Abre **SSMS**.
-2. En la ventana de conexión, en **Authentication** deja **Windows
-   Authentication** y clic en **Connect**.
-3. **Anota lo que dice en "Server name"**. Casi siempre es
-   `localhost\SQLEXPRESS`. Lo necesitas en el paso 4.
-4. Menú **File → Open → File…** y abre
-   `C:\COFFEESTOCK\scripts\crear_base_de_datos.sql`.
-5. Presiona **F5**. Abajo debe decir
-   `Listo: base de datos CoffeeStockDB preparada.`
+> Si dice `destination path 'COFFEESTOCK' already exists`, ya lo habías
+> descargado antes. Ve a [Empezar desde cero](#empezar-desde-cero).
 
-### Paso 3. Preparar Python
+---
 
-En la misma PowerShell (dentro de `C:\COFFEESTOCK`), un comando a la vez:
+## Paso 5. Crear la base de datos
+
+En SSMS, ya conectado (paso 3):
+
+1. Menú **File → Open → File…**
+2. Abre el archivo `C:\COFFEESTOCK\scripts\crear_base_de_datos.sql`.
+3. Presiona **F5** (o el botón **Execute**).
+
+✅ Abajo, en **Messages**, dice
+`Listo: base de datos CoffeeStockDB preparada.` Si en Object Explorer das clic
+derecho en **Databases → Refresh**, aparece `CoffeeStockDB`.
+
+> Las tablas todavía no existen; se crean en el paso 8.
+
+---
+
+## Paso 6. Preparar Python
+
+De vuelta en la PowerShell (en `C:\COFFEESTOCK`), uno a la vez:
 
 ```powershell
 py -m venv venv
@@ -118,15 +192,23 @@ venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
-- Después del segundo comando la línea debe empezar con `(venv)`.
-- El tercero tarda un par de minutos y termina con `Successfully installed ...`.
-- Si al activar dice **"la ejecución de scripts está deshabilitada"**: escribe
-  `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, responde `S` y
-  vuelve a correr `venv\Scripts\Activate.ps1`.
+✅ Después del segundo comando, la línea empieza con `(venv)`, así:
+`(venv) PS C:\COFFEESTOCK>`. El tercero tarda un par de minutos y termina con
+`Successfully installed ...`.
 
-### Paso 4. Crear el archivo de configuración (`.env`)
+❌ Si al activar dice **"la ejecución de scripts está deshabilitada"**:
 
-1. En la PowerShell escribe:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Responde `S` (o `Y`), Enter, y vuelve a correr `venv\Scripts\Activate.ps1`.
+
+---
+
+## Paso 7. Crear el archivo de configuración (`.env`)
+
+1. En la PowerShell:
 
    ```powershell
    notepad .env
@@ -134,11 +216,10 @@ pip install -r requirements.txt
 
    Si pregunta si quieres crear un archivo nuevo, di **Sí**.
 
-2. Se abre el Bloc de notas. Presiona **Ctrl + A** (selecciona todo) y luego
-   **Suprimir**, para que quede vacío.
+2. En el Bloc de notas presiona **Ctrl + A** y luego **Suprimir**, para que
+   quede vacío.
 
-3. **Copia el bloque de abajo, pégalo con Ctrl + V y cambia `tu_correo@gmail.com`
-   por tu correo:**
+3. Copia este bloque y pégalo con **Ctrl + V**:
 
    ```ini
    DB_NAME=CoffeeStockDB
@@ -151,15 +232,23 @@ pip install -r requirements.txt
    ALERTA_EMAIL_DESTINATARIOS=tu_correo@gmail.com
    ```
 
-   Si en el paso 2 el "Server name" **no** era `localhost\SQLEXPRESS`, cambia
-   también `DB_HOST` por lo que anotaste.
+4. Cambia dos cosas:
+   - En `DB_HOST=` pon **TU_SERVIDOR** del paso 2, si no es
+     `localhost\SQLEXPRESS`.
+   - En `ALERTA_EMAIL_DESTINATARIOS=` pon **tu correo**.
 
-4. Guarda con **Ctrl + S** y cierra el Bloc de notas.
+5. Guarda con **Ctrl + S** y cierra el Bloc de notas.
 
-> Esto usa tu usuario de Windows para entrar a SQL Server, igual que SSMS. No
-> hace falta usuario ni contraseña.
+> `DB_USER` y `DB_PASSWORD` van **vacíos**: así el sistema entra a SQL Server
+> con tu usuario de Windows, igual que SSMS en el paso 3.
+>
+> `ALERTA_EMAIL_PROVEEDOR=consola` significa que, por ahora, las alertas se
+> muestran en la PowerShell en vez de enviarse. En el paso 11 lo cambias para
+> que lleguen a tu correo.
 
-### Paso 5. Crear las tablas y los datos de prueba
+---
+
+## Paso 8. Crear las tablas y los datos de prueba
 
 Uno a la vez:
 
@@ -179,202 +268,313 @@ python manage.py create_test_users
 python manage.py seed_demo_data
 ```
 
-Lo que debes ver:
+✅ Lo que debes ver:
 
 | Comando | Mensaje final |
 |---|---|
 | `migrate` | Una lista de `Applying ... OK` |
-| `create_groups` | `Grupos "Administrador" y "Cajero" creados...` |
-| `create_test_users` | `Usuarios de prueba ... creados...` |
-| `seed_demo_data` | `Datos de ejemplo creados: 10 insumos, 8 productos...` |
+| `create_groups` | `Grupos "Administrador" y "Cajero" creados/actualizados...` |
+| `create_test_users` | `Usuarios de prueba "cajero1" y "admin_coffeestock" creados/actualizados.` |
+| `seed_demo_data` | `Datos de ejemplo creados: 10 insumos, 8 productos, ...` |
 
-### Paso 6. Abrir el sistema
-
-```powershell
-python manage.py runserver
-```
-
-Deja esa PowerShell abierta. Abre el navegador en **http://127.0.0.1:8000/** y
-entra con:
-
-| Usuario | Contraseña | Qué ve |
-|---|---|---|
-| `admin_coffeestock` | `Admin123!` | Dashboard, insumos, productos, mermas, ventas |
-| `cajero1` | `Cajero123!` | Punto de venta |
-
-Para apagar el sistema: clic en la PowerShell y **Ctrl + C**.
-
-### Paso 7. Probar una alerta
-
-1. Entra como `admin_coffeestock`.
-2. Menú **Mermas → Registrar merma**.
-3. Insumo: **Sirope de caramelo**. Cantidad: **10**. Causa: cualquiera.
-   **Guardar**.
-4. Mira la PowerShell donde corre el sistema: ahí aparece el correo de alerta
-   impreso (`Subject: [CoffeeStock] Stock bajo: Sirope de caramelo`).
-
-Si lo ves, todo funciona. Todavía no llega a ningún buzón porque está en modo
-`consola`. Para que llegue de verdad sigue la parte D.
-
-### La próxima vez que quieras abrir el sistema
-
-Abre PowerShell y:
-
-```powershell
-cd C:\COFFEESTOCK
-venv\Scripts\Activate.ps1
-python manage.py runserver
-```
+❌ Si `migrate` falla, es un problema de conexión con SQL Server. Revisa que
+`DB_HOST` en el `.env` sea exactamente TU_SERVIDOR y mira
+[Si algo falla](#si-algo-falla).
 
 ---
 
-## D. Recibir las alertas en tu correo
+## Paso 9. Abrir el sistema
 
-Hay dos formas. Elige una.
+```powershell
+python manage.py runserver
+```
 
-### Opción 1: SendGrid (si alguien ya te pasó la API key)
+✅ Sale `Starting WSGI development server at http://127.0.0.1:8000/`.
 
-En SendGrid hay dos correos y **no son lo mismo**:
+**Deja esa PowerShell abierta** mientras usas el sistema. Abre el navegador en
+**http://127.0.0.1:8000/**.
 
-- **Remitente** (`SENDGRID_FROM_EMAIL`): el correo del **dueño de la cuenta de
-  SendGrid**, el que está verificado ahí. No se cambia.
-- **Destinatario** (`ALERTA_EMAIL_DESTINATARIOS`): **quien recibe** las
-  alertas. Aquí pones tu correo (o varios separados por coma).
+Usuarios de prueba:
 
-Pasos:
+| Usuario | Contraseña | Qué puede hacer |
+|---|---|---|
+| `admin_coffeestock` | `Admin123!` | Todo: dashboard, insumos, productos, ventas, mermas y POS |
+| `cajero1` | `Cajero123!` | Punto de venta y registrar mermas |
 
-1. Apaga el sistema: **Ctrl + C** en la PowerShell.
-2. Abre la configuración:
+Para apagar el sistema: clic en la PowerShell y **Ctrl + C**.
 
-   ```powershell
-   notepad .env
-   ```
+---
 
-3. Borra las dos últimas líneas (`ALERTA_EMAIL_PROVEEDOR=...` y
-   `ALERTA_EMAIL_DESTINATARIOS=...`) y pega en su lugar:
+## Paso 10. Probar el sistema completo
 
-   ```ini
-   ALERTA_EMAIL_PROVEEDOR=sendgrid
-   ALERTA_EMAIL_DESTINATARIOS=tu_correo@gmail.com
-   SENDGRID_API_KEY=SG.pega_aqui_la_api_key
-   SENDGRID_FROM_EMAIL=correo_del_dueño_de_sendgrid@gmail.com
-   ```
+**A. Hacer una venta (como cajero)**
 
-   Cambia los tres valores: tu correo, la API key completa (empieza con
-   `SG.`) y el correo verificado del dueño de la cuenta.
+1. Entra con `cajero1` / `Cajero123!`. Se abre el **punto de venta**.
+2. Clic en **Cappuccino** y en **Croissant**. Aparecen en el carrito a la
+   derecha con su total.
+3. Clic en **Confirmar venta**. Arriba sale en verde
+   `Venta #... registrada correctamente. Total: ...`.
+4. Arriba a la derecha, **Salir**.
 
-4. **Ctrl + S** y cierra el Bloc de notas.
-5. Prueba el envío (ver [Probar el correo](#probar-el-correo)).
+**B. Revisar como administrador**
 
-> Si tú eres el dueño de la cuenta y no tienes API key: en sendgrid.com ve a
-> **Settings → Sender Authentication → Verify a Single Sender** y verifica tu
-> correo; luego **Settings → API Keys → Create API Key** con permiso
-> **Mail Send**. La key se muestra una sola vez, cópiala.
+1. Entra con `admin_coffeestock` / `Admin123!`. Se abre el **Dashboard**:
+   - Tarjetas rojas con los insumos que están bajo el mínimo
+     (**Café en grano robusta** y **Sirope de caramelo**).
+   - Gráficas de ventas de 7 días, top 5 de productos y mermas del mes.
+2. Menú **Ventas**: la venta del cajero aparece de primera. Clic en ella para
+   ver el detalle.
+3. Menú **Insumos**: la leche, el café y la harina bajaron por la receta de lo
+   que se vendió.
 
-### Opción 2: Gmail (no necesita SendGrid)
+**C. Provocar una alerta de stock bajo**
 
-1. En tu cuenta de Google activa la
-   [verificación en dos pasos](https://myaccount.google.com/signinoptions/twosv).
+1. Menú **Registrar merma**.
+2. Insumo: **Sirope de caramelo**. Cantidad: `10`. Causa: la que quieras.
+3. Clic en **Registrar merma**.
+4. Mira la PowerShell donde corre el sistema. Aparece el correo de alerta
+   impreso, con el asunto `[CoffeeStock] Stock bajo: Sirope de caramelo`, y al
+   final la línea `Alerta de stock de "Sirope de caramelo" enviada.`
+
+✅ Si ves todo esto, el sistema funciona completo. Solo falta que la alerta
+llegue a un correo real (paso 11).
+
+---
+
+## Paso 11. Recibir las alertas en tu correo
+
+Elige **una** opción: **A** si tienes una API key de SendGrid, **B** si
+prefieres usar Gmail.
+
+Primero apaga el sistema: clic en la PowerShell y **Ctrl + C**. Luego abre la
+configuración:
+
+```powershell
+notepad .env
+```
+
+Presiona **Ctrl + A**, **Suprimir**, y pega el bloque de tu opción.
+
+### Opción A: SendGrid
+
+```ini
+DB_NAME=CoffeeStockDB
+DB_HOST=localhost\SQLEXPRESS
+DB_PORT=
+DB_USER=
+DB_PASSWORD=
+
+ALERTA_EMAIL_PROVEEDOR=sendgrid
+ALERTA_EMAIL_DESTINATARIOS=tu_correo@gmail.com
+SENDGRID_API_KEY=SG.pega_aqui_la_api_key
+SENDGRID_FROM_EMAIL=correo_verificado_en_sendgrid@gmail.com
+```
+
+Cambia:
+
+- `DB_HOST`: TU_SERVIDOR (el mismo del paso 7).
+- `ALERTA_EMAIL_DESTINATARIOS`: **quien recibe** las alertas. Puede ser
+  cualquier correo, o varios separados por coma.
+- `SENDGRID_API_KEY`: la API key completa. Empieza con `SG.`.
+- `SENDGRID_FROM_EMAIL`: el correo **verificado en la cuenta de SendGrid** (el
+  del dueño de la cuenta). **No lo cambies por el correo de quien recibe**: si
+  no está verificado, SendGrid rechaza todo con error 403.
+
+> ¿No tienes API key y quieres crear tu propia cuenta? En
+> [sendgrid.com](https://sendgrid.com/): **Settings → Sender Authentication →
+> Verify a Single Sender** (verifica tu correo) y después **Settings → API
+> Keys → Create API Key** con permiso **Mail Send**. La key se muestra una
+> sola vez.
+
+### Opción B: Gmail
+
+Antes, crea una contraseña de aplicación:
+
+1. Activa la [verificación en dos pasos](https://myaccount.google.com/signinoptions/twosv)
+   de tu cuenta de Google.
 2. Entra a [Contraseñas de aplicaciones](https://myaccount.google.com/apppasswords),
-   escribe cualquier nombre (ej. `CoffeeStock`), clic en **Crear** y copia la
-   clave de 16 letras **sin espacios**.
-3. Apaga el sistema (**Ctrl + C**) y abre `notepad .env`.
-4. Borra las dos últimas líneas y pega:
+   escribe `CoffeeStock`, clic en **Crear** y copia la clave de 16 letras.
 
-   ```ini
-   ALERTA_EMAIL_PROVEEDOR=smtp
-   ALERTA_EMAIL_DESTINATARIOS=tu_correo@gmail.com
-   EMAIL_HOST=smtp.gmail.com
-   EMAIL_PORT=587
-   EMAIL_USE_TLS=True
-   EMAIL_HOST_USER=tu_cuenta_de_gmail@gmail.com
-   EMAIL_HOST_PASSWORD=clavede16letras
-   ```
+Luego pega en el `.env`:
 
-   `EMAIL_HOST_USER` es la cuenta que envía. `ALERTA_EMAIL_DESTINATARIOS` es
-   quien recibe. Pueden ser el mismo correo.
+```ini
+DB_NAME=CoffeeStockDB
+DB_HOST=localhost\SQLEXPRESS
+DB_PORT=
+DB_USER=
+DB_PASSWORD=
 
-5. **Ctrl + S**, cierra, y prueba el envío (abajo).
+ALERTA_EMAIL_PROVEEDOR=smtp
+ALERTA_EMAIL_DESTINATARIOS=tu_correo@gmail.com
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=tu_cuenta_de_gmail@gmail.com
+EMAIL_HOST_PASSWORD=clavede16letras
+```
 
-### Probar el correo
+Cambia `DB_HOST`, `ALERTA_EMAIL_DESTINATARIOS` (quien recibe),
+`EMAIL_HOST_USER` (la cuenta de Gmail que envía) y `EMAIL_HOST_PASSWORD` (la
+clave de 16 letras, **sin espacios**).
 
-Con el sistema apagado, en la PowerShell:
+### Guarda y prueba
+
+Guarda con **Ctrl + S**, cierra el Bloc de notas y escribe:
 
 ```powershell
 python manage.py probar_correo
 ```
 
-- Si sale **en verde** algo como `SendGrid aceptó el correo`: revisa tu
-  bandeja, y también **Spam** y **Promociones**. Puede tardar un minuto.
-- Si sale **en rojo** un `CommandError`: el mensaje dice qué está mal. Los más
-  comunes:
+✅ Debe verse así:
 
-  | Dice | Qué hacer |
-  |---|---|
-  | `403` / `verified Sender Identity` | `SENDGRID_FROM_EMAIL` no es el correo verificado del dueño de la cuenta. |
-  | `401` | La API key está mal copiada, incompleta o fue borrada. |
-  | `Username and Password not accepted` | En Gmail usaste tu contraseña normal; necesitas la de aplicación de 16 letras. |
-  | `Falta ...` | Esa línea no está en el `.env` o está vacía. |
-  | `No se pudo conectar` | Sin internet, o un antivirus/firewall está bloqueando. |
+```
+Configuración actual de alertas por correo:
+  Archivo:       C:\COFFEESTOCK\.env
+  Proveedor:     sendgrid
+  Remitente:     correo_verificado_en_sendgrid@gmail.com
+  Destinatarios: tu_correo@gmail.com
+  API key:       SG.abc...
 
-Cuando `probar_correo` funcione, prueba una alerta real:
+SendGrid aceptó el correo (status 202).
+```
 
-1. Por si ya probaste antes en modo consola, reinicia los datos de prueba (cada
-   insumo avisa **una sola vez cada 24 horas**, y la prueba en consola ya
-   cuenta):
+Revisa tu bandeja: llega **"[CoffeeStock] Correo de prueba"**. Si no está,
+busca en **Spam** o **Correo no deseado**, y si está ahí márcalo como "No es
+spam".
 
-   ```powershell
-   python manage.py seed_demo_data --reset
-   ```
+❌ Si algo sale mal, el mensaje dice por qué:
 
-2. Levanta el sistema: `python manage.py runserver`.
-3. Repite el [Paso 7](#paso-7-probar-una-alerta) (merma de 10 en **Sirope de
-   caramelo**).
-4. Revisa tu correo (y Spam). En la PowerShell debe aparecer
-   `Alerta de stock de "Sirope de caramelo" enviada.`
-
-Si en el `.env` falta algún dato del correo (API key, remitente, destinatario),
-el dashboard muestra arriba un aviso amarillo diciendo qué falta. Si todo está
-bien, no aparece nada.
-
-### Cuándo se envía una alerta
-
-- Cuando una venta, una merma o una edición deja un insumo **en o por debajo**
-  de su stock mínimo.
-- Máximo **un correo por insumo cada 24 horas**. Si editas el insumo y le
-  subes el stock por encima del mínimo, el contador se reinicia.
-- Si el correo falla, la venta o merma se guarda igual; el error aparece en la
-  PowerShell y la tarjeta roja sigue en el dashboard.
+| Si ves… | Qué hacer |
+|---|---|
+| `Proveedor: consola` | El `.env` no se guardó o la línea `ALERTA_EMAIL_PROVEEDOR` está mal escrita. Repite este paso. |
+| `403` o `verified Sender Identity` | `SENDGRID_FROM_EMAIL` no es el correo verificado en SendGrid. |
+| `401` | La API key está mal copiada o fue borrada. |
+| `Username and Password not accepted` | En Gmail pusiste tu contraseña normal; necesitas la de 16 letras. |
+| `Falta ...` | Esa línea está vacía en el `.env`. |
+| `No se pudo conectar` | Sin internet, o el antivirus/firewall lo bloquea. |
+| `202` pero el correo no llega ni a Spam | Algunos correos institucionales (universidad, empresa) filtran estos envíos. Prueba con un Gmail: `python manage.py probar_correo --para tucorreo@gmail.com` |
 
 ---
 
-## E. Si algo falla
+## Paso 12. Probar la alerta por correo
+
+Cada insumo avisa **una sola vez cada 24 horas**, y la prueba del paso 10 ya
+contó. Así que primero reinicia los datos de prueba:
+
+```powershell
+python manage.py seed_demo_data --reset
+```
+
+```powershell
+python manage.py runserver
+```
+
+1. Entra con `admin_coffeestock` / `Admin123!`.
+2. Menú **Registrar merma** → Insumo **Sirope de caramelo** → Cantidad `10` →
+   **Registrar merma**.
+3. En la PowerShell aparece:
+   `Alerta de stock de "Sirope de caramelo" enviada. SendGrid aceptó el correo (status 202).`
+4. En tu correo llega **"[CoffeeStock] Stock bajo: Sirope de caramelo"**.
+
+✅ Listo. La instalación está completa.
+
+**Para mostrar otra alerta** sin reiniciar: registra una merma de `10` en
+**Café en grano robusta**, que también está bajo el mínimo.
+
+**Cuándo se manda una alerta:** cuando una venta, una merma o una edición de
+insumo deja el stock **en o por debajo del mínimo**. Si el correo falla, la
+venta o merma se guarda igual y el error aparece en la PowerShell.
+
+---
+
+## La próxima vez que quieras abrir el sistema
+
+Abre PowerShell y escribe, uno a la vez:
+
+```powershell
+cd C:\COFFEESTOCK
+```
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
+```powershell
+python manage.py runserver
+```
+
+Y abre http://127.0.0.1:8000/. Si SQL Server está apagado, enciéndelo como en
+el paso 2.
+
+---
+
+## Empezar desde cero
+
+Si ya lo habías intentado y quieres dejar todo limpio antes de empezar de
+nuevo en el paso 4:
+
+**1. Borra la base de datos.** En SSMS (conectado como en el paso 3), clic en
+**New Query**, pega esto y presiona **F5**:
+
+```sql
+USE master;
+GO
+IF DB_ID('CoffeeStockDB') IS NOT NULL
+BEGIN
+    ALTER DATABASE CoffeeStockDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE CoffeeStockDB;
+END
+GO
+```
+
+**2. Borra la carpeta del proyecto.** Cierra VS Code y cualquier PowerShell
+que esté dentro de `C:\COFFEESTOCK`. Abre una PowerShell nueva y escribe, uno a
+la vez:
+
+```powershell
+cd C:\
+```
+
+```powershell
+Remove-Item -Recurse -Force C:\COFFEESTOCK
+```
+
+Si dice que no existe, no pasa nada. Ahora sigue desde el
+[paso 4](#paso-4-descargar-el-proyecto).
+
+---
+
+## Si algo falla
 
 | Error | Solución |
 |---|---|
-| `No suitable Python runtime found`, o se abre la Microsoft Store | Python no está instalado, o la PowerShell estaba abierta al instalarlo. Ver [parte A](#a-instalar-programas-una-sola-vez) y abre una PowerShell nueva. |
-| `No matching distribution found for Django==6.1` | Tu Python es menor a 3.12. Instala uno nuevo, borra la carpeta `venv` y repite el paso 3. |
-| `python` no se reconoce, pero antes funcionaba | Olvidaste activar el entorno: `venv\Scripts\Activate.ps1`. |
-| `Can't open lib 'ODBC Driver...'` / `Data source name not found` | Falta el ODBC Driver 18 (parte A, punto 5). |
-| `Login timeout expired` / `Named Pipes Provider` | `DB_HOST` no es igual al "Server name" de SSMS, o SQL Server está apagado. En Windows abre **Servicios** y revisa que "SQL Server (SQLEXPRESS)" esté **En ejecución**. |
-| `Cannot open database "CoffeeStockDB"` | No corriste el script del paso 2. |
-| `Login failed for user` | Revisa `DB_USER`/`DB_PASSWORD` en el `.env`. Con el bloque del paso 4 deben ir vacíos. |
+| `No suitable Python runtime found`, o se abre la Microsoft Store | Python no está instalado, o la PowerShell estaba abierta al instalarlo. Paso 1 y abre una PowerShell nueva. |
+| `No matching distribution found for Django==6.1` | Tu Python es menor a 3.12. Instala uno nuevo, borra la carpeta `venv` y repite el paso 6. |
+| `No module named 'django'` | Falta activar el entorno: `venv\Scripts\Activate.ps1` (la línea debe empezar con `(venv)`). |
+| `Can't open lib 'ODBC Driver...'` / `Data source name not found` | Falta el ODBC Driver 18 (paso 1, punto 5). |
+| `Login timeout expired` / `Named Pipes Provider` / `server was not found` | `DB_HOST` no es TU_SERVIDOR, o SQL Server está apagado. Repite el paso 2. |
+| `Cannot open database "CoffeeStockDB"` | Falta el paso 5. |
+| `Login failed for user` | Deja `DB_USER` y `DB_PASSWORD` vacíos en el `.env` (paso 7). |
 | `seed_demo_data` pregunta `¿Deseas continuar?` | Ya había datos. Escribe `n` y usa `python manage.py seed_demo_data --reset`. |
-| Cambié el `.env` y no pasa nada | Apaga con **Ctrl + C** y vuelve a correr `python manage.py runserver`. |
-| No llega el correo | `python manage.py probar_correo`, revisa Spam, y recuerda el límite de 24 h por insumo. |
+| Cambié el `.env` y no pasa nada | Guarda con Ctrl + S, apaga con Ctrl + C y vuelve a correr `python manage.py runserver`. |
+| No llega el correo | `python manage.py probar_correo` y lee el mensaje (paso 11). Revisa Spam. Recuerda el límite de 24 h por insumo. |
+| El dashboard muestra un aviso amarillo de correo | Falta un dato del correo en el `.env`; el aviso dice cuál. |
 
-### Usar usuario y contraseña de SQL Server (opcional)
+---
 
-El script del paso 2 también crea el usuario `coffeestock_app` con contraseña
-`CoffeeStock_2026!`. Para usarlo:
+## Otras formas de conectar SQL Server (opcional)
 
-1. En SSMS activa el modo mixto: clic derecho en el servidor → **Properties** →
-   **Security** → **SQL Server and Windows Authentication mode** → **OK**.
-   Luego clic derecho en el servidor → **Restart**.
-2. En el `.env` pon `DB_USER=coffeestock_app` y
-   `DB_PASSWORD=CoffeeStock_2026!`.
+### Con usuario y contraseña en vez de Windows
 
-### SQL Server en Docker (macOS / Linux)
+El script del paso 5 también crea el usuario `coffeestock_app` con la
+contraseña `CoffeeStock_2026!`.
+
+1. En SSMS activa el modo mixto: clic derecho sobre el servidor →
+   **Properties** → **Security** → **SQL Server and Windows Authentication
+   mode** → **OK**. Luego clic derecho sobre el servidor → **Restart**.
+2. En el `.env`: `DB_USER=coffeestock_app` y `DB_PASSWORD=CoffeeStock_2026!`.
+
+### SQL Server en Docker (macOS / Linux / Windows)
 
 ```bash
 docker run -d --name coffeestock-sql -p 1433:1433 -e ACCEPT_EULA=Y -e 'MSSQL_SA_PASSWORD=CoffeeStock_2026!' mcr.microsoft.com/mssql/server:2022-latest
@@ -382,17 +582,17 @@ docker exec -i coffeestock-sql /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa 
 ```
 
 En el `.env`: `DB_HOST=localhost`, `DB_PORT=1433`, `DB_USER=sa`,
-`DB_PASSWORD=CoffeeStock_2026!`. Entorno virtual: `python3 -m venv venv` y
-`source venv/bin/activate`. En Mac instala el driver con
-`brew install msodbcsql18` y, con chip Apple, activa en Docker Desktop
-**Settings → General → Use Rosetta**.
+`DB_PASSWORD=CoffeeStock_2026!`. En macOS/Linux el entorno se crea con
+`python3 -m venv venv` y se activa con `source venv/bin/activate`. En Mac
+instala el driver con `brew install msodbcsql18` y, si tu Mac tiene chip Apple,
+activa en Docker Desktop **Settings → General → Use Rosetta**.
 
 ---
 
 ## Para desarrolladores
 
-**Pruebas automáticas:** `python manage.py test` (crea y borra una base
-temporal; cubren el flujo de alertas).
+**Pruebas automáticas:** `python manage.py test`. Crean y borran una base
+temporal; cubren el flujo de alertas y la lectura del `.env`.
 
 **Estructura:**
 
@@ -410,7 +610,8 @@ al 17/18), `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`. `SENDGRID_ADMIN_EMAIL` de
 versiones anteriores se sigue aceptando como destinatario.
 
 **Antes de un uso real** cambia las contraseñas de prueba:
-`python manage.py changepassword admin_coffeestock` y `... cajero1`.
+`python manage.py changepassword admin_coffeestock` y
+`python manage.py changepassword cajero1`.
 
 ---
 
