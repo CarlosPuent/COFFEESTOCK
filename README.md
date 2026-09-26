@@ -333,8 +333,9 @@ Cuando `probar_correo` funcione, prueba una alerta real:
 4. Revisa tu correo (y Spam). En la PowerShell debe aparecer
    `Alerta de stock de "Sirope de caramelo" enviada.`
 
-En el dashboard, arriba, también se ve a qué correo se están enviando las
-alertas o qué falta configurar.
+Si en el `.env` falta algún dato del correo (API key, remitente, destinatario),
+el dashboard muestra arriba un aviso amarillo diciendo qué falta. Si todo está
+bien, no aparece nada.
 
 ### Cuándo se envía una alerta
 
