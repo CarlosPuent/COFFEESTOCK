@@ -99,27 +99,46 @@ DB_USER = env('DB_USER', default='')
 DB_PASSWORD = env('DB_PASSWORD', default='')
 DB_PORT = env('DB_PORT', default='')
 
-DB_HOST = env('DB_HOST', default='')
+DB_HOST = env('DB_HOST', default='localhost')
 if DB_PORT:
     DB_HOST = f'{DB_HOST},{DB_PORT}'
+
+
+def _detectar_driver_odbc():
+    """Usa DB_DRIVER si está definido; si no, el driver ODBC de SQL Server
+    más reciente que haya instalado en la máquina (18, 17, ...)."""
+    driver = env('DB_DRIVER', default='')
+    if driver:
+        return driver
+    try:
+        import pyodbc
+        instalados = [d for d in pyodbc.drivers() if d.startswith('ODBC Driver') and 'SQL Server' in d]
+    except Exception:
+        instalados = []
+    if instalados:
+        return max(instalados, key=lambda d: int(''.join(c for c in d if c.isdigit()) or 0))
+    return 'ODBC Driver 18 for SQL Server'
+
 
 DATABASES = {
     'default': {
         'ENGINE': 'mssql',
-        'NAME': env('DB_NAME', default=''),
+        'NAME': env('DB_NAME', default='CoffeeStockDB'),
         'HOST': DB_HOST,
         'OPTIONS': {
-            'driver': 'ODBC Driver 17 for SQL Server',
-            'TrustServerCertificate': 'yes',
+            'driver': _detectar_driver_odbc(),
+            # Para desarrollo local: acepta el certificado autofirmado que
+            # SQL Server genera por defecto (el driver 18 lo exige).
+            'extra_params': 'TrustServerCertificate=yes',
         },
     }
 }
 
+# Con DB_USER y DB_PASSWORD se usa SQL Authentication. Si falta alguno,
+# mssql-django agrega Trusted_Connection=yes (Windows Authentication).
 if DB_USER and DB_PASSWORD:
     DATABASES['default']['USER'] = DB_USER
     DATABASES['default']['PASSWORD'] = DB_PASSWORD
-else:
-    DATABASES['default']['OPTIONS']['Trusted_Connection'] = 'yes'
 
 
 # Password validation
@@ -160,21 +179,74 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'coffeestock' / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Imágenes de productos subidas desde el dashboard.
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+# Las alertas de stock bajo se envían por uno de estos proveedores:
+#   consola  -> el correo se imprime en la terminal de runserver (no sale a internet)
+#   sendgrid -> API de SendGrid (requiere API key y remitente verificado)
+#   smtp     -> cualquier servidor SMTP (Gmail, Outlook, Mailtrap, etc.)
+# Si ALERTA_EMAIL_PROVEEDOR está vacío se elige solo: sendgrid si hay API key,
+# smtp si hay EMAIL_HOST_USER, y consola en cualquier otro caso.
 
 SENDGRID_API_KEY = env('SENDGRID_API_KEY', default='')
 SENDGRID_FROM_EMAIL = env('SENDGRID_FROM_EMAIL', default='')
-SENDGRID_ADMIN_EMAIL = env('SENDGRID_ADMIN_EMAIL', default='')
+
+SMTP_USUARIO = env('EMAIL_HOST_USER', default='')
+
+ALERTA_EMAIL_PROVEEDOR = env('ALERTA_EMAIL_PROVEEDOR', default='').strip().lower()
+if not ALERTA_EMAIL_PROVEEDOR:
+    if SENDGRID_API_KEY:
+        ALERTA_EMAIL_PROVEEDOR = 'sendgrid'
+    elif SMTP_USUARIO:
+        ALERTA_EMAIL_PROVEEDOR = 'smtp'
+    else:
+        ALERTA_EMAIL_PROVEEDOR = 'consola'
+
+# Quién recibe las alertas: uno o varios correos separados por coma.
+# SENDGRID_ADMIN_EMAIL se sigue aceptando por compatibilidad con .env viejos.
+ALERTA_EMAIL_DESTINATARIOS = [
+    correo.strip()
+    for correo in env.list(
+        'ALERTA_EMAIL_DESTINATARIOS', default=env.list('SENDGRID_ADMIN_EMAIL', default=[])
+    )
+    if correo.strip()
+]
+
+# Quién aparece como remitente. En SendGrid DEBE ser el correo verificado
+# como "Sender" en tu cuenta; en SMTP normalmente es tu mismo usuario.
+if ALERTA_EMAIL_PROVEEDOR == 'sendgrid':
+    DEFAULT_FROM_EMAIL = SENDGRID_FROM_EMAIL
+else:
+    DEFAULT_FROM_EMAIL = env('EMAIL_FROM', default=SMTP_USUARIO or 'alertas@coffeestock.local')
+
+if ALERTA_EMAIL_PROVEEDOR == 'smtp':
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+            'OPTIONS': {
+                'host': env('EMAIL_HOST', default='smtp.gmail.com'),
+                'port': env.int('EMAIL_PORT', default=587),
+                'username': SMTP_USUARIO,
+                'password': env('EMAIL_HOST_PASSWORD', default=''),
+                'use_tls': env.bool('EMAIL_USE_TLS', default=True),
+                'timeout': 15,
+            },
+        },
+    }
+else:
+    MAILERS = {
+        'default': {
+            'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        },
+    }
 
 
 # Logging
@@ -200,7 +272,7 @@ LOGGING = {
         },
         'core': {
             'handlers': ['console'],
-            'level': 'WARNING',
+            'level': 'INFO',
             'propagate': False,
         },
     },

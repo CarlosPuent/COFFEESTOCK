@@ -5,6 +5,26 @@
 {% block dashboard_content %}
 <h1 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
 
+{% if not estado_correo.listo %}
+  <div class="alert alert-warning small">
+    <i class="bi bi-envelope-exclamation me-1"></i>
+    <strong>Las alertas por correo no están configuradas.</strong>
+    {% for problema in estado_correo.problemas %}{{ problema }} {% endfor %}
+    Revisa tu archivo <code>.env</code> y prueba con <code>python manage.py probar_correo</code>.
+  </div>
+{% elif not estado_correo.sale_a_internet %}
+  <div class="alert alert-info small">
+    <i class="bi bi-terminal me-1"></i>
+    Las alertas se están imprimiendo en la consola del servidor (modo <code>consola</code>), no se envían por correo.
+    Para recibirlas en <strong>{{ estado_correo.destinatarios|join:", " }}</strong>, configura SendGrid o SMTP en el <code>.env</code>.
+  </div>
+{% else %}
+  <p class="text-muted small mb-3">
+    <i class="bi bi-envelope-check me-1"></i>
+    Alertas de stock por {{ estado_correo.proveedor|upper }} a: {{ estado_correo.destinatarios|join:", " }}
+  </p>
+{% endif %}
+
 <section class="mb-4">
   {% if insumos_alerta %}
     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
