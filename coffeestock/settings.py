@@ -16,6 +16,15 @@ from pathlib import Path
 import environ
 from django.contrib.messages import constants as message_constants
 
+# Usa los certificados del sistema operativo (en Windows, los de Windows) para
+# las conexiones HTTPS/SMTP. Sin esto, un antivirus o una red que inspecciona
+# HTTPS hace fallar el envío de correos con CERTIFICATE_VERIFY_FAILED.
+try:
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:
+    pass
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 

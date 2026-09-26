@@ -452,6 +452,7 @@ spam".
 | `Username and Password not accepted` | En Gmail pusiste tu contraseña normal; necesitas la de 16 letras. |
 | `Falta ...` | Esa línea está vacía en el `.env`. |
 | `No se pudo conectar` | Sin internet, o el antivirus/firewall lo bloquea. |
+| `CERTIFICATE_VERIFY_FAILED` | Un antivirus o la red inspecciona HTTPS. Corre `pip install -r requirements.txt` (instala `truststore`) y vuelve a probar. |
 | `202` pero el correo no llega ni a Spam | Algunos correos institucionales (universidad, empresa) filtran estos envíos. Prueba con un Gmail: `python manage.py probar_correo --para tucorreo@gmail.com` |
 
 ---

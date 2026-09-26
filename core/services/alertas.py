@@ -75,6 +75,13 @@ def _describir_error_sendgrid(exc):
 
     status = getattr(exc, 'status_code', None)
     if status is None and isinstance(exc, URLError):
+        if 'CERTIFICATE_VERIFY_FAILED' in str(exc.reason):
+            return (
+                'No se pudo verificar el certificado de api.sendgrid.com. Suele ser un '
+                'antivirus o una red que inspecciona HTTPS. Corre '
+                '"pip install -r requirements.txt" para instalar truststore, que hace '
+                'que Python use los certificados de Windows.'
+            )
         return (
             f'No se pudo conectar con api.sendgrid.com ({exc.reason}). Revisa la conexión '
             'a internet, un firewall/antivirus o proxy, o en macOS ejecuta '
