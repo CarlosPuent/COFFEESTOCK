@@ -56,8 +56,27 @@ Cada usuario cae en su pantalla automáticamente al iniciar sesión.
 | **ODBC Driver 18 for SQL Server** (o el 17) | Que Python pueda hablar con SQL Server | [Descarga de Microsoft](https://learn.microsoft.com/sql/connect/odbc/download-odbc-driver-for-sql-server) |
 | SQL Server Management Studio (SSMS) | Opcional, para ver la base de datos y correr el script | [Descarga de SSMS](https://learn.microsoft.com/sql/ssms/download-sql-server-management-studio-ssms) |
 
-Para comprobar Python abre una terminal y escribe `python --version` (en
-Windows también sirve `py --version`). Debe decir 3.12 o más.
+### Instalar Python en Windows
+
+1. Entra a [python.org/downloads](https://www.python.org/downloads/) y
+   descarga la versión más nueva (3.12 o mayor).
+2. Abre el instalador y, **antes de darle a Install Now**, marca la casilla
+   **"Add python.exe to PATH"** abajo de la ventana.
+3. Cuando termine, **cierra todas las terminales** (PowerShell, CMD, VS Code)
+   y abre una nueva. Las terminales que ya estaban abiertas no ven la
+   instalación nueva.
+
+También se puede instalar desde PowerShell con
+`winget install Python.Python.3.13` (y luego cerrar y abrir la terminal).
+
+Para comprobar que quedó bien, en la terminal nueva escribe:
+
+```powershell
+py --list
+```
+
+Tiene que aparecer una línea con `3.12` o más (por ejemplo `-V:3.13 *`). En
+macOS/Linux usa `python3 --version`.
 
 ---
 
@@ -133,22 +152,53 @@ git clone https://github.com/CarlosPuent/COFFEESTOCK.git
 cd COFFEESTOCK
 ```
 
-Crea y activa un entorno virtual (una carpeta `venv` con las librerías del
-proyecto, para no mezclarlas con las de tu computadora):
+Ahora crea el entorno virtual: una carpeta `venv` con las librerías del
+proyecto, para no mezclarlas con las del resto de tu computadora. Son **dos
+comandos distintos**: escribe el primero, presiona Enter, y luego el segundo.
 
-| Sistema | Crear | Activar |
-|---|---|---|
-| Windows (PowerShell) | `py -3.12 -m venv venv` | `venv\Scripts\Activate.ps1` |
-| Windows (CMD) | `py -3.12 -m venv venv` | `venv\Scripts\activate.bat` |
-| macOS / Linux | `python3 -m venv venv` | `source venv/bin/activate` |
+**Windows (PowerShell)**
 
-Sabrás que está activo porque la terminal muestra `(venv)` al inicio. Cada vez
-que abras una terminal nueva para trabajar en el proyecto tienes que
-activarlo otra vez.
+```powershell
+py -m venv venv
+```
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
+**Windows (CMD)**
+
+```bat
+py -m venv venv
+```
+
+```bat
+venv\Scripts\activate.bat
+```
+
+**macOS / Linux**
+
+```bash
+python3 -m venv venv
+```
+
+```bash
+source venv/bin/activate
+```
+
+Sabrás que funcionó porque la línea de la terminal empieza con `(venv)`, por
+ejemplo `(venv) PS C:\COFFEESTOCK>`. Cada vez que abras una terminal nueva
+para trabajar en el proyecto tienes que correr otra vez **solo el segundo
+comando** (activar); el primero se hace una sola vez.
 
 > Si PowerShell dice que "la ejecución de scripts está deshabilitada", corre
-> una sola vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` y vuelve
-> a intentar.
+> una sola vez `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`, responde
+> `S` (o `Y`) y vuelve a correr el comando de activar.
+
+> Si `py` dice **"No suitable Python runtime found"**, o `python` abre la
+> Microsoft Store o dice **"no se encontró Python"**, es que Python no está
+> instalado. Vuelve a [Qué necesitas instalar](#qué-necesitas-instalar),
+> instálalo y **cierra y abre la terminal** antes de seguir.
 
 Instala las dependencias:
 
@@ -401,7 +451,8 @@ un dominio propio.
 
 | Error o síntoma | Causa y solución |
 |---|---|
-| `No matching distribution found for Django==6.1` al instalar | Tu Python es 3.11 o anterior. Instala 3.12+ y vuelve a crear el `venv` con `py -3.12 -m venv venv`. |
+| `No suitable Python runtime found`, o `python` abre la Microsoft Store / dice "no se encontró Python" | Python no está instalado (o se instaló con la terminal abierta). Ver [Instalar Python en Windows](#instalar-python-en-windows) y abre una terminal nueva. |
+| `No matching distribution found for Django==6.1` al instalar | Tu Python es 3.11 o anterior. Instala 3.12+, borra la carpeta `venv` y vuelve a crearla con `py -m venv venv`. |
 | `Can't open lib 'ODBC Driver 18 for SQL Server'` o `Data source name not found` | Falta el ODBC Driver. Instala el 18 (o el 17). Si tienes otro, ponlo en `DB_DRIVER` en el `.env`. |
 | `Login timeout expired` / `Named Pipes Provider: Could not open a connection` | `DB_HOST` no coincide con el "Server name" de SSMS, o el servicio de SQL Server está apagado. Revisa en **Servicios** de Windows que "SQL Server (SQLEXPRESS)" esté iniciado. Para instancias con nombre (`\SQLEXPRESS`) también debe correr "SQL Server Browser". |
 | `Login failed for user 'coffeestock_app'` o `'sa'` | Contraseña incorrecta o falta activar **SQL Server and Windows Authentication mode** (ver paso 1). |
