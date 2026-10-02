@@ -606,7 +606,7 @@ templates/             HTML (Bootstrap 5, Chart.js)
 scripts/               crear_base_de_datos.sql
 ```
 
-**Otras variables del `.env`:** `DB_DRIVER` (si tienes un driver ODBC distinto
+**Otras variables del `.env`:** `TIME_ZONE` (por defecto `America/El_Salvador`; por ejemplo `America/Mexico_City` o `America/Bogota` si el sistema se usa en otro país), `DB_DRIVER` (si tienes un driver ODBC distinto
 al 17/18), `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`. `SENDGRID_ADMIN_EMAIL` de
 versiones anteriores se sigue aceptando como destinatario.
 
@@ -659,8 +659,7 @@ Lo que queda para la entrega final, agrupado por tema.
 - POS pensado para pantalla táctil (botones más grandes, atajos de teclado).
 - Confirmaciones y mensajes más claros cuando falta stock para una venta.
 - Modo oscuro y revisión de accesibilidad (contraste, navegación con teclado).
-- Traducir por completo la interfaz y el admin de Django al español, y usar la
-  zona horaria local (hoy fechas y gráficos se calculan en UTC).
+- Traducir por completo la interfaz y el admin de Django al español.
 
 ### Calidad y despliegue
 

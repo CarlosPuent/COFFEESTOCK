@@ -195,7 +195,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Zona horaria en la que se muestran las fechas y se agrupan los reportes.
+# La base de datos siempre guarda en UTC; Django convierte al mostrar.
+# Lista de zonas: https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
+TIME_ZONE = env('TIME_ZONE', default='America/El_Salvador')
 
 USE_I18N = True
 
