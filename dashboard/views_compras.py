@@ -31,6 +31,16 @@ class ProveedorListView(ListadoMixin, GroupRequiredMixin, ListView):
     context_object_name = 'proveedores'
     allowed_groups = ['Administrador']
     filtro_form_class = ProveedorFilterForm
+    titulo_excel = 'Proveedores'
+    columnas_excel = [
+        ('Código', 'texto', 10), ('Proveedor', 'texto', 28), ('Contacto', 'texto', 20),
+        ('Teléfono', 'texto', 14), ('Correo', 'texto', 26), ('Compras', 'entero', 10, True),
+        ('Total comprado', 'moneda', 16), ('Estado', 'texto', 11),
+    ]
+
+    def fila_excel(self, p):
+        return [p.codigo, p.nombre, p.contacto, p.telefono, p.correo, p.num_compras,
+                p.total_comprado, 'Activo' if p.activo else 'Inactivo']
     columnas_orden = {
         'codigo': 'pk',
         'nombre': 'nombre',
@@ -98,6 +108,16 @@ class CompraListView(ListadoMixin, GroupRequiredMixin, ListView):
     context_object_name = 'compras'
     allowed_groups = ['Administrador']
     filtro_form_class = CompraFilterForm
+    titulo_excel = 'Compras'
+    columnas_excel = [
+        ('Folio', 'texto', 11), ('Fecha', 'fecha', 12), ('Proveedor', 'texto', 26),
+        ('Factura', 'texto', 13), ('Insumos', 'entero', 10), ('Total', 'moneda', 13),
+        ('Registró', 'texto', 15),
+    ]
+
+    def fila_excel(self, c):
+        return [c.codigo, c.fecha, c.proveedor.nombre if c.proveedor else 'Sin proveedor',
+                c.numero_factura, c.num_lineas, c.total, c.usuario.get_username()]
     columnas_orden = {
         'folio': 'pk',
         'fecha': 'fecha',

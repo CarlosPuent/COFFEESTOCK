@@ -47,12 +47,58 @@ def buscar_por_nombre_o_codigo(queryset, texto, prefijo, campo='nombre', otros_c
 
 
 class ListadoMixin:
+    # Exportar a Excel: columnas (titulo, formato, ancho[, sumar]) y una
+    # función que convierte cada objeto en su fila.
+    columnas_excel = None
+    titulo_excel = None
     filtro_form_class = None
     # clave que viaja en la URL -> campo (o lista de campos) para order_by
     columnas_orden = {}
     # clave de columnas_orden; con '-' delante para orden descendente
     orden_defecto = None
     paginate_by = 20
+
+    def fila_excel(self, objeto):
+        raise NotImplementedError
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get('exportar') == 'xlsx' and self.columnas_excel:
+            return self.exportar_excel()
+        return super().get(request, *args, **kwargs)
+
+    def descripcion_filtros(self):
+        form = self.get_filtro_form()
+        if form is None or not form.is_valid():
+            return 'Sin filtros'
+        partes = []
+        for nombre, valor in form.cleaned_data.items():
+            if valor in (None, '', []):
+                continue
+            campo = form.fields[nombre]
+            if hasattr(campo, 'choices') and not hasattr(valor, 'pk'):
+                valor = dict(campo.choices).get(valor, valor)
+            elif hasattr(valor, 'strftime'):
+                valor = valor.strftime('%d/%m/%Y')
+            partes.append(f'{campo.label}: {valor}')
+        return 'Filtros: ' + '; '.join(partes) if partes else 'Sin filtros'
+
+    def exportar_excel(self):
+        from django.http import HttpResponse
+        from django.utils import timezone
+
+        from .reportes.excel import LibroExcel
+
+        titulo = self.titulo_excel or self.model._meta.verbose_name_plural.capitalize()
+        libro = LibroExcel(titulo, self.descripcion_filtros(), self.request.user)
+        libro.hoja(titulo, self.columnas_excel,
+                   [self.fila_excel(obj) for obj in self.get_queryset_filtrado()], totales=True)
+        respuesta = HttpResponse(
+            libro.generar(),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        nombre = f'coffeestock-{self.model._meta.model_name}-{timezone.localdate():%Y%m%d}.xlsx'
+        respuesta['Content-Disposition'] = f'attachment; filename="{nombre}"'
+        return respuesta
 
     # --- filtros ---
 

@@ -14,7 +14,10 @@
     </p>
   </div>
   <div class="encabezado-acciones">
-    {% block acciones_extra %}{% endblock %}
+    <a class="btn btn-formato btn-pdf" target="_blank" rel="noopener"
+       href="{% url 'dashboard:corte_caja_pdf' %}?fecha={{ corte.fecha_desde|date:'Y-m-d' }}{% if corte.cajero and es_admin %}&cajero={{ corte.cajero.pk }}{% endif %}">
+      <i class="bi bi-file-earmark-pdf me-1"></i>Descargar PDF
+    </a>
   </div>
 </div>
 

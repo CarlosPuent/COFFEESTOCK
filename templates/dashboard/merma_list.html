@@ -14,7 +14,7 @@
     </p>
   </div>
   <div class="encabezado-acciones">
-    {% block acciones_extra %}{% endblock %}
+    {% include 'dashboard/_boton_exportar.html' %}
     <a href="{% url 'dashboard:merma_create' %}" class="btn btn-primary"><i class="bi bi-clipboard2-plus me-1"></i>Registrar merma</a>
   </div>
 </div>

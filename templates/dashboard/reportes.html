@@ -1,0 +1,82 @@
+{% extends 'dashboard/dashboard_base.html' %}
+
+{% block title %}Reportes - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-bar-chart-line me-2"></i>Reportes</h1>
+    <p class="encabezado-resumen">
+      Período seleccionado: <strong>{{ desde|date:"d/m/Y" }} – {{ hasta|date:"d/m/Y" }}</strong>
+      <span class="separador">·</span> Los PDF se abren en una pestaña nueva; los Excel se descargan.
+    </p>
+  </div>
+</div>
+
+<div class="filtros">
+  <form method="get" class="filtros-campos">
+    {% for campo in filtro_form %}
+      <div class="filtro">
+        <label class="form-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+        {{ campo }}
+      </div>
+    {% endfor %}
+    <div class="periodos-rapidos">
+      {% for etiqueta, inicio, fin in periodos_rapidos %}
+        <a href="?desde={{ inicio|date:'Y-m-d' }}&hasta={{ fin|date:'Y-m-d' }}"
+           class="chip{% if inicio == desde and fin == hasta %} chip-activo{% endif %}">{{ etiqueta }}</a>
+      {% endfor %}
+    </div>
+    <div class="filtros-acciones">
+      <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-calendar-check me-1"></i>Aplicar período</button>
+    </div>
+  </form>
+  {% if filtro_form.non_field_errors %}<div class="text-danger small mt-2">{{ filtro_form.non_field_errors|join:" " }}</div>{% endif %}
+</div>
+
+<div class="reporte-destacado mb-4">
+  <div class="reporte-icono"><i class="bi bi-cash-stack"></i></div>
+  <div class="flex-grow-1">
+    <div class="reporte-titulo">Corte de caja</div>
+    <div class="reporte-descripcion">El cierre de un día: ventas, arqueo de efectivo, desglose por cajero y espacio para firmas. Se genera desde su propia pantalla, eligiendo la fecha.</div>
+  </div>
+  <a href="{% url 'dashboard:corte_caja' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-right me-1"></i>Ir al corte de caja</a>
+</div>
+
+{% for grupo, reportes in grupos.items %}
+  <h2 class="titulo-bloque">{{ grupo }}</h2>
+  <div class="reportes-grid mb-4">
+    {% for r in reportes %}
+      <div class="reporte">
+        <div class="d-flex align-items-start gap-3">
+          <div class="reporte-icono"><i class="bi {{ r.icono }}"></i></div>
+          <div>
+            <div class="reporte-titulo">{{ r.titulo }}</div>
+            <div class="reporte-descripcion">{{ r.descripcion }}</div>
+            {% if r.nota_xlsx %}<div class="reporte-descripcion mt-1">{{ r.nota_xlsx }}</div>{% endif %}
+          </div>
+        </div>
+        <div class="reporte-pie">
+          <span class="reporte-alcance">
+            {% if r.periodo %}<i class="bi bi-calendar3 me-1"></i>{{ desde|date:"d/m/Y" }} – {{ hasta|date:"d/m/Y" }}{% else %}<i class="bi bi-clock me-1"></i>Datos actuales{% endif %}
+          </span>
+          <div class="d-flex gap-2">
+            {% if r.pdf %}
+              <a class="btn btn-sm btn-formato btn-pdf" target="_blank" rel="noopener"
+                 href="{% url 'dashboard:reporte' r.clave 'pdf' %}{% if r.periodo %}?desde={{ desde|date:'Y-m-d' }}&hasta={{ hasta|date:'Y-m-d' }}{% endif %}">
+                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+              </a>
+            {% endif %}
+            {% if r.xlsx %}
+              <a class="btn btn-sm btn-formato btn-xlsx"
+                 href="{% url 'dashboard:reporte' r.clave 'xlsx' %}{% if r.periodo %}?desde={{ desde|date:'Y-m-d' }}&hasta={{ hasta|date:'Y-m-d' }}{% endif %}">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Excel
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endfor %}
+{% endblock %}

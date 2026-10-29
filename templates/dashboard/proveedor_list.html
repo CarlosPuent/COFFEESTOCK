@@ -10,6 +10,7 @@
     <p class="encabezado-resumen">{{ total_resultados }} proveedor{{ total_resultados|pluralize:"es" }} · quién te vende los insumos y cuánto les has comprado</p>
   </div>
   <div class="encabezado-acciones">
+    {% include 'dashboard/_boton_exportar.html' %}
     <a href="{% url 'dashboard:proveedor_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Nuevo proveedor</a>
   </div>
 </div>

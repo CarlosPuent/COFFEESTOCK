@@ -151,3 +151,71 @@ class UsuariosYCorteTests(TestCase):
         corte = self.client.get(reverse('dashboard:corte_caja'), {'cajero': self.otro.pk}).context['corte']
         self.assertEqual(corte['cajero'], self.cajero)
         self.assertEqual(corte['total'], Decimal('7.75'))
+
+
+class ReportesTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user('admin', password='x')
+        cls.admin.groups.add(Group.objects.create(name='Administrador'))
+        cls.cajero = User.objects.create_user('caja', password='x')
+        cls.cajero.groups.add(Group.objects.create(name='Cajero'))
+        cafe = Insumo.objects.create(nombre='Café', unidad_medida='g', stock_actual=Decimal('100'),
+                                     stock_minimo=Decimal('500'), costo_unitario=Decimal('0.02'))
+        latte = Producto.objects.create(nombre='Latte', categoria='bebida', precio_venta=Decimal('3'))
+        RecetaInsumo.objects.create(producto=latte, insumo=cafe, cantidad_requerida=18)
+        venta = Venta.objects.create(usuario_cajero=cls.cajero, total=Decimal('6'),
+                                     metodo_pago='efectivo', monto_recibido=Decimal('10'))
+        DetalleVenta.objects.create(venta=venta, producto=latte, cantidad=2,
+                                    precio_unitario=Decimal('3'), subtotal=Decimal('6'))
+        Merma.objects.create(insumo=cafe, cantidad=Decimal('5'), causa='otro', usuario_responsable=cls.admin)
+
+    def test_todos_los_reportes_se_generan(self):
+        from .reportes.generadores import CATALOGO
+
+        self.client.force_login(self.admin)
+        for clave, reporte in CATALOGO.items():
+            for formato in ('pdf', 'xlsx'):
+                if formato not in reporte:
+                    continue
+                with self.subTest(reporte=clave, formato=formato):
+                    respuesta = self.client.get(reverse('dashboard:reporte', args=[clave, formato]))
+                    self.assertEqual(respuesta.status_code, 200)
+                    contenido = respuesta.content
+                    self.assertTrue(contenido.startswith(b'%PDF' if formato == 'pdf' else b'PK'))
+
+    def test_formato_no_disponible_da_404(self):
+        self.client.force_login(self.admin)
+        self.assertEqual(self.client.get(reverse('dashboard:reporte', args=['inventario', 'pdf'])).status_code, 404)
+
+    def test_reporte_de_ventas_en_excel_tiene_las_lineas(self):
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        self.client.force_login(self.admin)
+        respuesta = self.client.get(reverse('dashboard:reporte', args=['ventas', 'xlsx']))
+        hoja = load_workbook(BytesIO(respuesta.content)).worksheets[0]
+        self.assertEqual(hoja['G6'].value, 'Latte')
+        self.assertEqual(hoja['J6'].value, 6)
+
+    def test_exportar_listados(self):
+        self.client.force_login(self.admin)
+        for nombre in ['insumo_list', 'producto_list', 'merma_list', 'venta_list', 'compra_list', 'proveedor_list']:
+            with self.subTest(listado=nombre):
+                respuesta = self.client.get(reverse(f'dashboard:{nombre}'), {'exportar': 'xlsx'})
+                self.assertEqual(respuesta.status_code, 200)
+                self.assertTrue(respuesta.content.startswith(b'PK'))
+
+    def test_cajero_no_ve_reportes_pero_si_su_corte_en_pdf(self):
+        self.client.force_login(self.cajero)
+        self.assertEqual(self.client.get(reverse('dashboard:reportes')).status_code, 403)
+        respuesta = self.client.get(reverse('dashboard:corte_caja_pdf'))
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertIn('caja', respuesta['Content-Disposition'])
+
+    def test_pagina_de_reportes_muestra_los_botones(self):
+        self.client.force_login(self.admin)
+        respuesta = self.client.get(reverse('dashboard:reportes'))
+        self.assertContains(respuesta, reverse('dashboard:reporte', args=['ventas', 'pdf']))
+        self.assertContains(respuesta, reverse('dashboard:reporte', args=['inventario', 'xlsx']))

@@ -166,6 +166,17 @@ class InsumoListView(ListadoMixin, GroupRequiredMixin, ListView):
     context_object_name = 'insumos'
     allowed_groups = ['Administrador']
     filtro_form_class = InsumoFilterForm
+    titulo_excel = 'Insumos'
+    columnas_excel = [
+        ('Código', 'texto', 11), ('Insumo', 'texto', 26), ('Unidad', 'texto', 11),
+        ('Stock actual', 'cantidad', 13), ('Stock mínimo', 'cantidad', 13),
+        ('Costo unitario', 'costo', 14), ('Valor en inventario', 'moneda', 18), ('Estado', 'texto', 13),
+    ]
+
+    def fila_excel(self, i):
+        estado = 'Inactivo' if not i.activo else ('Bajo mínimo' if i.stock_bajo else 'Normal')
+        return [i.codigo, i.nombre, i.get_unidad_medida_display(), i.stock_actual, i.stock_minimo,
+                i.costo_unitario, i.valor, estado]
     columnas_orden = {
         'codigo': 'pk',
         'nombre': 'nombre',
@@ -241,6 +252,16 @@ class ProductoListView(ListadoMixin, GroupRequiredMixin, ListView):
     context_object_name = 'productos'
     allowed_groups = ['Administrador']
     filtro_form_class = ProductoFilterForm
+    titulo_excel = 'Productos'
+    columnas_excel = [
+        ('Código', 'texto', 11), ('Producto', 'texto', 24), ('Categoría', 'texto', 13),
+        ('Precio de venta', 'moneda', 15, False), ('Costo', 'moneda', 11, False),
+        ('Margen', 'porcentaje', 10), ('Estado', 'texto', 11),
+    ]
+
+    def fila_excel(self, p):
+        return [p.codigo, p.nombre, p.get_categoria_display(), p.precio_venta, p.costo_total,
+                p.margen_pct, 'Activo' if p.activo else 'Inactivo']
     columnas_orden = {
         'codigo': 'pk',
         'nombre': 'nombre',
@@ -373,6 +394,16 @@ class MermaListView(ListadoMixin, GroupRequiredMixin, ListView):
     context_object_name = 'mermas'
     allowed_groups = ['Administrador']
     filtro_form_class = MermaFilterForm
+    titulo_excel = 'Mermas'
+    columnas_excel = [
+        ('Código', 'texto', 11), ('Fecha', 'fechahora', 17), ('Insumo', 'texto', 24),
+        ('Cantidad', 'cantidad', 11), ('Unidad', 'texto', 9), ('Causa', 'texto', 17),
+        ('Costo', 'moneda', 12), ('Responsable', 'texto', 16), ('Observación', 'texto', 40),
+    ]
+
+    def fila_excel(self, m):
+        return [m.codigo, m.fecha, m.insumo.nombre, m.cantidad, m.insumo.get_unidad_medida_display(),
+                m.get_causa_display(), m.costo_merma, m.usuario_responsable.get_username(), m.observacion]
     columnas_orden = {
         'codigo': 'pk',
         'fecha': 'fecha',
@@ -415,6 +446,16 @@ class VentaListView(ListadoMixin, GroupRequiredMixin, ListView):
     context_object_name = 'ventas'
     allowed_groups = ['Administrador']
     filtro_form_class = VentaFilterForm
+    titulo_excel = 'Ventas'
+    columnas_excel = [
+        ('Folio', 'texto', 12), ('Fecha', 'fechahora', 17), ('Cajero', 'texto', 16),
+        ('Artículos', 'cantidad', 10, True), ('Pago', 'texto', 11), ('Estado', 'texto', 12),
+        ('Total', 'moneda', 13),
+    ]
+
+    def fila_excel(self, v):
+        return [v.codigo, v.fecha, v.usuario_cajero.get_username(), v.num_productos,
+                v.get_metodo_pago_display(), v.get_estado_display(), v.total]
     columnas_orden = {
         'folio': 'pk',
         'fecha': 'fecha',
