@@ -1,0 +1,111 @@
+{% load static formato %}<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ticket {{ venta.codigo }} - {{ negocio.nombre }}</title>
+  <link href="{% static 'vendor/fonts/fonts.css' %}" rel="stylesheet">
+  <style>
+    @page { size: 80mm auto; margin: 4mm; }
+    :root { --tinta: #241B15; --suave: #7A6A5C; --acento: #A9793F; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #EDE6DC;
+      font-family: 'Inter', system-ui, sans-serif;
+      color: var(--tinta);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .ticket {
+      width: 80mm;
+      margin: 24px auto;
+      padding: 18px 16px 22px;
+      background: #fff;
+      box-shadow: 0 6px 24px rgba(36, 27, 21, 0.15);
+      position: relative;
+    }
+    .centro { text-align: center; }
+    .negocio { font-family: 'Fraunces', Georgia, serif; font-size: 19px; font-weight: 700; margin: 2px 0 0; }
+    .icono { color: var(--acento); }
+    .suave { color: var(--suave); }
+    .separador { border: 0; border-top: 1px dashed #c9bfb3; margin: 10px 0; }
+    .fila { display: flex; justify-content: space-between; gap: 8px; }
+    .fila span:last-child { text-align: right; white-space: nowrap; }
+    .producto { margin-bottom: 6px; }
+    .producto-nombre { font-weight: 600; }
+    .total { font-size: 15px; font-weight: 700; margin-top: 4px; }
+    .folio { font-family: Consolas, monospace; letter-spacing: 0.04em; }
+    .anulada {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      pointer-events: none;
+    }
+    .anulada span {
+      transform: rotate(-24deg); border: 3px solid #B54B3A; color: #B54B3A;
+      font-weight: 800; font-size: 26px; letter-spacing: 0.2em; padding: 4px 14px; opacity: 0.75;
+    }
+    .acciones { width: 80mm; margin: 0 auto 32px; display: flex; gap: 8px; }
+    .acciones button {
+      flex: 1; padding: 10px; border-radius: 8px; border: 1.5px solid var(--tinta);
+      background: #fff; font: inherit; font-weight: 600; cursor: pointer;
+    }
+    .acciones .principal { background: var(--acento); border-color: var(--acento); color: #fff; }
+    @media print {
+      body { background: #fff; }
+      .ticket { margin: 0; box-shadow: none; width: auto; padding: 0; }
+      .acciones { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ticket">
+    {% if venta.anulada %}<div class="anulada"><span>ANULADA</span></div>{% endif %}
+
+    <div class="centro">
+      <svg class="icono" width="26" height="26" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M3 3.5A1.5 1.5 0 0 1 4.5 2h6A1.5 1.5 0 0 1 12 3.5V4h.75A1.75 1.75 0 0 1 14.5 5.75v.5A1.75 1.75 0 0 1 12.75 8H12v1.5A3.5 3.5 0 0 1 8.5 13h-2A3.5 3.5 0 0 1 3 9.5v-6Zm9 2v2h.75a.75.75 0 0 0 .75-.75v-.5a.75.75 0 0 0-.75-.75H12Z"/></svg>
+      <p class="negocio">{{ negocio.nombre }}</p>
+      <div class="suave">{{ negocio.direccion }}</div>
+      {% if negocio.telefono %}<div class="suave">Tel. {{ negocio.telefono }}</div>{% endif %}
+      {% if negocio.nit %}<div class="suave">NIT {{ negocio.nit }}</div>{% endif %}
+    </div>
+
+    <hr class="separador">
+    <div class="fila"><span>Ticket</span><span class="folio">{{ venta.codigo }}</span></div>
+    <div class="fila"><span>Fecha</span><span>{{ venta.fecha|date:"d/m/Y H:i" }}</span></div>
+    <div class="fila"><span>Atendió</span><span>{{ venta.usuario_cajero.get_username }}</span></div>
+    <hr class="separador">
+
+    {% for detalle in venta.detalles.all %}
+      <div class="producto">
+        <div class="producto-nombre">{{ detalle.producto.nombre }}</div>
+        <div class="fila suave">
+          <span>{{ detalle.cantidad|cantidad }} × {{ detalle.precio_unitario|moneda }}</span>
+          <span>{{ detalle.subtotal|moneda }}</span>
+        </div>
+      </div>
+    {% endfor %}
+
+    <hr class="separador">
+    <div class="fila total"><span>TOTAL</span><span>{{ venta.total|moneda }}</span></div>
+    <div class="fila"><span>Pago</span><span>{{ venta.get_metodo_pago_display }}</span></div>
+    {% if venta.monto_recibido is not None %}
+      <div class="fila"><span>Recibido</span><span>{{ venta.monto_recibido|moneda }}</span></div>
+      <div class="fila"><span>Cambio</span><span>{{ venta.cambio|moneda }}</span></div>
+    {% endif %}
+    <hr class="separador">
+
+    <div class="centro">
+      <div>¡Gracias por tu visita!</div>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <button type="button" onclick="window.close()">Cerrar</button>
+    <button type="button" class="principal" onclick="window.print()">Imprimir</button>
+  </div>
+
+  {% if request.GET.imprimir %}
+  <script>window.addEventListener('load', function () { window.print(); });</script>
+  {% endif %}
+</body>
+</html>

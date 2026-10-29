@@ -1,40 +1,70 @@
 {% extends 'dashboard/dashboard_base.html' %}
+{% load formato crispy_forms_tags %}
 
-{% load formato %}
 {% block title %}Venta {{ venta.codigo }} - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <h1 class="mb-0"><i class="bi bi-receipt me-2"></i>Venta <span class="col-codigo fs-5">{{ venta.codigo }}</span></h1>
-  <a href="{% url 'dashboard:venta_list' %}" class="btn btn-outline-secondary">
-    <i class="bi bi-arrow-left me-1"></i>Volver al listado
-  </a>
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-receipt me-2"></i>Venta <span class="col-codigo fs-5">{{ venta.codigo }}</span></h1>
+    <p class="encabezado-resumen">
+      {% if venta.anulada %}<span class="badge-estado badge-estado-alerta">Anulada</span>{% else %}<span class="badge-estado badge-estado-si">Completada</span>{% endif %}
+    </p>
+  </div>
+  <div class="encabezado-acciones">
+    <a href="{% url 'dashboard:venta_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <a href="{% url 'pos:ticket' venta.pk %}" target="_blank" rel="noopener" class="btn btn-outline-secondary"><i class="bi bi-printer me-1"></i>Ticket</a>
+    {% if not venta.anulada %}
+      <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalAnular"><i class="bi bi-x-octagon me-1"></i>Anular venta</button>
+    {% endif %}
+  </div>
 </div>
+
+{% if venta.anulada %}
+  <div class="alert alert-danger">
+    <i class="bi bi-x-octagon me-1"></i>
+    Anulada por <strong>{{ venta.anulada_por.get_username }}</strong> el {{ venta.fecha_anulacion|date:"d/m/Y H:i" }}.
+    Motivo: {{ venta.motivo_anulacion }}. El stock consumido se devolvió al inventario y la venta no cuenta en reportes.
+  </div>
+{% endif %}
 
 <div class="card mb-4">
   <div class="card-body">
-    <div class="row row-cols-1 row-cols-md-3 g-3">
+    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3">
       <div class="col">
-        <div class="text-muted small">Fecha y hora</div>
-        <div class="fw-semibold">{{ venta.fecha|date:"d/m/Y H:i" }}</div>
+        <div class="dato-etiqueta">Fecha y hora</div>
+        <div class="dato-valor">{{ venta.fecha|date:"d/m/Y H:i" }}</div>
       </div>
       <div class="col">
-        <div class="text-muted small">Cajero</div>
-        <div class="fw-semibold">{{ venta.usuario_cajero.get_username }}</div>
+        <div class="dato-etiqueta">Cajero</div>
+        <div class="dato-valor">{{ venta.usuario_cajero.get_username }}</div>
       </div>
       <div class="col">
-        <div class="text-muted small">Total</div>
-        <div class="fw-semibold">{{ venta.total|moneda }}</div>
+        <div class="dato-etiqueta">Método de pago</div>
+        <div class="dato-valor">{{ venta.get_metodo_pago_display }}</div>
+      </div>
+      <div class="col">
+        <div class="dato-etiqueta">Recibido</div>
+        <div class="dato-valor">{{ venta.monto_recibido|moneda }}</div>
+      </div>
+      <div class="col">
+        <div class="dato-etiqueta">Cambio</div>
+        <div class="dato-valor">{{ venta.cambio|moneda }}</div>
+      </div>
+      <div class="col">
+        <div class="dato-etiqueta">Total</div>
+        <div class="dato-valor dato-destacado">{{ venta.total|moneda }}</div>
       </div>
     </div>
   </div>
 </div>
 
-<h2 class="mb-2"><i class="bi bi-list-ul me-1"></i>Productos vendidos</h2>
-<div class="table-responsive">
-  <table class="table table-bordered table-hover align-middle">
+<h2 class="titulo-bloque">Productos vendidos</h2>
+<div class="table-responsive tabla-contenedor">
+  <table class="table align-middle">
     <thead>
       <tr>
+        <th>Código</th>
         <th>Producto</th>
         <th class="text-end">Precio unitario</th>
         <th class="text-end">Cantidad</th>
@@ -44,15 +74,44 @@
     <tbody>
       {% for detalle in venta.detalles.all %}
         <tr>
-          <td class="fw-medium">{{ detalle.producto.nombre }}<span class="celda-secundaria col-codigo">{{ detalle.producto.codigo }}</span></td>
+          <td class="col-codigo">{{ detalle.producto.codigo }}</td>
+          <td class="fw-medium">{{ detalle.producto.nombre }}</td>
           <td class="col-num">{{ detalle.precio_unitario|moneda }}</td>
           <td class="col-num">{{ detalle.cantidad|cantidad }}</td>
           <td class="col-num">{{ detalle.subtotal|moneda }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="4" class="text-center text-muted">Esta venta no tiene detalles.</td></tr>
+        <tr><td colspan="5" class="text-center text-muted">Esta venta no tiene detalles.</td></tr>
       {% endfor %}
     </tbody>
+    <tfoot>
+      <tr class="fila-total">
+        <td colspan="4" class="text-end">Total</td>
+        <td class="col-num">{{ venta.total|moneda }}</td>
+      </tr>
+    </tfoot>
   </table>
 </div>
+
+{% if not venta.anulada %}
+<div class="modal fade" id="modalAnular" tabindex="-1" aria-labelledby="modalAnularTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <form method="post" action="{% url 'dashboard:venta_anular' venta.pk %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h2 class="modal-title" id="modalAnularTitulo"><i class="bi bi-x-octagon me-2"></i>Anular venta {{ venta.codigo }}</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        <p>La venta quedará marcada como anulada, no contará en los reportes y se devolverá al inventario lo que consumió. Esta acción no se puede deshacer.</p>
+        {{ form_anular.motivo|as_crispy_field }}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-danger"><i class="bi bi-x-octagon me-1"></i>Anular venta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

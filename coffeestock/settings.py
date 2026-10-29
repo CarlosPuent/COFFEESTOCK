@@ -114,6 +114,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.user_groups',
+                'core.context_processors.negocio',
             ],
         },
     },
@@ -169,6 +170,15 @@ DATABASES = {
 if DB_USER and DB_PASSWORD:
     DATABASES['default']['USER'] = DB_USER
     DATABASES['default']['PASSWORD'] = DB_PASSWORD
+
+
+# Datos del negocio que aparecen en tickets y reportes.
+NEGOCIO = {
+    'nombre': env('NEGOCIO_NOMBRE', default='CoffeeStock Café'),
+    'direccion': env('NEGOCIO_DIRECCION', default='San Salvador, El Salvador'),
+    'telefono': env('NEGOCIO_TELEFONO', default=''),
+    'nit': env('NEGOCIO_NIT', default=''),
+}
 
 
 # Password validation

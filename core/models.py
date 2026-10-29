@@ -90,6 +90,15 @@ class Insumo(models.Model):
         insumo.sincronizar_alerta()
         self.refresh_from_db()
 
+    @transaction.atomic
+    def reponer_stock(self, cantidad):
+        """Devuelve stock sin tocar el costo (por ejemplo, al anular una venta)."""
+        insumo = Insumo.objects.select_for_update().get(pk=self.pk)
+        insumo.stock_actual = insumo.stock_actual + cantidad
+        insumo.save(update_fields=['stock_actual', 'fecha_actualizacion'])
+        insumo.sincronizar_alerta()
+        self.refresh_from_db()
+
     @property
     def stock_bajo(self):
         return self.stock_actual <= self.stock_minimo
@@ -220,7 +229,20 @@ class Merma(models.Model):
         return self.cantidad * self.insumo.costo_unitario
 
 
+class VentaQuerySet(models.QuerySet):
+    def completadas(self):
+        return self.filter(estado=Venta.Estado.COMPLETADA)
+
+
 class Venta(models.Model):
+    class MetodoPago(models.TextChoices):
+        EFECTIVO = 'efectivo', 'Efectivo'
+        TARJETA = 'tarjeta', 'Tarjeta'
+
+    class Estado(models.TextChoices):
+        COMPLETADA = 'completada', 'Completada'
+        ANULADA = 'anulada', 'Anulada'
+
     usuario_cajero = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventas'
     )
@@ -228,11 +250,29 @@ class Venta(models.Model):
     total = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
     )
+    metodo_pago = models.CharField(
+        'método de pago', max_length=10, choices=MetodoPago.choices, default=MetodoPago.EFECTIVO
+    )
+    monto_recibido = models.DecimalField(
+        max_digits=12, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)]
+    )
+    estado = models.CharField(
+        max_length=10, choices=Estado.choices, default=Estado.COMPLETADA
+    )
+    anulada_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='ventas_anuladas',
+        null=True, blank=True,
+    )
+    fecha_anulacion = models.DateTimeField(null=True, blank=True)
+    motivo_anulacion = models.TextField(blank=True)
+
+    objects = VentaQuerySet.as_manager()
 
     class Meta:
         ordering = ['-fecha']
         indexes = [
             models.Index(fields=['fecha'], name='idx_venta_fecha'),
+            models.Index(fields=['estado', 'fecha'], name='idx_venta_estado_fecha'),
         ]
 
     PREFIJO = 'V'
@@ -243,6 +283,16 @@ class Venta(models.Model):
     @property
     def codigo(self):
         return codigo(self.PREFIJO, self.pk, digitos=6)
+
+    @property
+    def anulada(self):
+        return self.estado == self.Estado.ANULADA
+
+    @property
+    def cambio(self):
+        if self.monto_recibido is None:
+            return None
+        return self.monto_recibido - self.total
 
 
 class DetalleVenta(models.Model):
@@ -255,6 +305,11 @@ class DetalleVenta(models.Model):
     cantidad = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0.01)]
     )
+    # Precio al momento de la venta: si el producto cambia de precio, el
+    # historial conserva el que se cobró.
+    precio_unitario = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
+    )
     subtotal = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
     )
@@ -264,10 +319,6 @@ class DetalleVenta(models.Model):
 
     def __str__(self):
         return f'{self.producto} x{self.cantidad} (Venta #{self.venta_id})'
-
-    @property
-    def precio_unitario(self):
-        return self.subtotal / self.cantidad if self.cantidad else self.subtotal
 
 
 class Proveedor(models.Model):

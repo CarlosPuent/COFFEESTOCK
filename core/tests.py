@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from python_http_client.exceptions import ForbiddenError
 
-from core.models import Compra, Insumo, Producto, RecetaInsumo
+from core.models import Compra, Insumo, Producto, RecetaInsumo, Venta
 from core.services.alertas import enviar_alerta_stock, enviar_correo
 
 User = get_user_model()
@@ -264,3 +264,82 @@ class CompraTests(TestCase):
         })
         self.assertEqual(respuesta.status_code, 200)
         self.assertFalse(Compra.objects.exists())
+
+
+@override_settings(**CONSOLA)
+class PagoYAnulacionTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user('admin', password='x')
+        self.admin.groups.add(Group.objects.create(name='Administrador'))
+        self.client.force_login(self.admin)
+        self.cafe = crear_insumo(nombre='Café', unidad_medida='g', stock_actual=Decimal('100'),
+                                 stock_minimo=Decimal('0'))
+        self.espresso = Producto.objects.create(nombre='Espresso', categoria='bebida', precio_venta=Decimal('1.75'))
+        RecetaInsumo.objects.create(producto=self.espresso, insumo=self.cafe, cantidad_requerida=18)
+
+    def vender(self, **datos):
+        datos.setdefault('items', [{'producto_id': self.espresso.pk, 'cantidad': 2}])
+        with self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(reverse('pos:confirmar_venta'), data=json.dumps(datos),
+                                    content_type='application/json')
+
+    def test_efectivo_calcula_el_cambio(self):
+        datos = self.vender(metodo_pago='efectivo', monto_recibido='5').json()
+        self.assertTrue(datos['success'])
+        self.assertEqual(datos['cambio'], '1.50')
+        self.assertEqual(datos['folio'], Venta.objects.get().codigo)
+        detalle = Venta.objects.get().detalles.get()
+        self.assertEqual(detalle.precio_unitario, Decimal('1.75'))
+
+    def test_efectivo_insuficiente_se_rechaza(self):
+        respuesta = self.vender(metodo_pago='efectivo', monto_recibido='2')
+        self.assertEqual(respuesta.status_code, 400)
+        self.assertIn('no cubre el total', respuesta.json()['error'])
+        self.assertFalse(Venta.objects.exists())
+
+    def test_tarjeta_no_guarda_monto_recibido(self):
+        self.vender(metodo_pago='tarjeta', monto_recibido='50')
+        venta = Venta.objects.get()
+        self.assertEqual(venta.metodo_pago, 'tarjeta')
+        self.assertIsNone(venta.monto_recibido)
+
+    def test_stock_insuficiente_explica_cuanto_falta(self):
+        respuesta = self.vender(items=[{'producto_id': self.espresso.pk, 'cantidad': 10}])
+        self.assertIn('Café (hay 100 g, se necesitan 180)', respuesta.json()['error'])
+
+    def test_anular_devuelve_stock_y_no_suma_en_ventas(self):
+        self.vender()
+        venta = Venta.objects.get()
+        self.cafe.refresh_from_db()
+        self.assertEqual(self.cafe.stock_actual, Decimal('64'))
+
+        respuesta = self.client.post(reverse('dashboard:venta_anular', args=[venta.pk]), {'motivo': 'Error'})
+        self.assertEqual(respuesta.status_code, 302)
+        venta.refresh_from_db()
+        self.cafe.refresh_from_db()
+        self.assertTrue(venta.anulada)
+        self.assertEqual(venta.anulada_por, self.admin)
+        self.assertEqual(self.cafe.stock_actual, Decimal('100'))
+
+        listado = self.client.get(reverse('dashboard:venta_list'))
+        self.assertEqual(listado.context['monto_total'], 0)
+        self.assertEqual(listado.context['num_anuladas'], 1)
+
+        # Anular dos veces no devuelve stock dos veces
+        self.client.post(reverse('dashboard:venta_anular', args=[venta.pk]), {'motivo': 'Otra vez'})
+        self.cafe.refresh_from_db()
+        self.assertEqual(self.cafe.stock_actual, Decimal('100'))
+
+    def test_anular_exige_motivo(self):
+        self.vender()
+        venta = Venta.objects.get()
+        self.client.post(reverse('dashboard:venta_anular', args=[venta.pk]), {'motivo': ''})
+        venta.refresh_from_db()
+        self.assertFalse(venta.anulada)
+
+    def test_ticket(self):
+        self.vender(metodo_pago='efectivo', monto_recibido='5')
+        venta = Venta.objects.get()
+        respuesta = self.client.get(reverse('pos:ticket', args=[venta.pk]))
+        self.assertContains(respuesta, venta.codigo)
+        self.assertContains(respuesta, '$1.50')  # cambio

@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.forms import formset_factory, inlineformset_factory
 from django.utils import timezone
 
-from core.models import Compra, Insumo, Merma, Producto, Proveedor, RecetaInsumo
+from core.models import Compra, Insumo, Merma, Producto, Proveedor, RecetaInsumo, Venta
 
 from .listados import FiltroForm
 
@@ -153,6 +153,12 @@ class VentaFilterForm(FiltroForm):
     fecha_hasta = campo_fecha('Hasta')
     total_min = campo_monto('Total desde', '$ mín.')
     total_max = campo_monto('Total hasta', '$ máx.')
+    metodo_pago = forms.ChoiceField(
+        required=False, label='Pago', choices=[('', 'Todos')] + list(Venta.MetodoPago.choices),
+    )
+    estado = forms.ChoiceField(
+        required=False, label='Estado', choices=[('', 'Todos')] + list(Venta.Estado.choices),
+    )
 
 
 RECETA_INSUMO_FORMSET_PREFIX = 'receta_insumos'
@@ -272,3 +278,10 @@ class CompraFilterForm(FiltroForm):
     )
     fecha_desde = campo_fecha('Desde')
     fecha_hasta = campo_fecha('Hasta')
+
+
+class AnularVentaForm(forms.Form):
+    motivo = forms.CharField(
+        label='Motivo de la anulación', max_length=500,
+        widget=forms.Textarea(attrs={'rows': 3, 'placeholder': 'Ej.: el cliente canceló el pedido'}),
+    )

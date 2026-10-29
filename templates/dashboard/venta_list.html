@@ -11,6 +11,7 @@
       {{ total_resultados }} venta{{ total_resultados|pluralize }}
       <span class="separador">·</span>
       Total vendido <strong>{{ monto_total|moneda }}</strong>
+      {% if num_anuladas %}<span class="separador">·</span>{{ num_anuladas }} anulada{{ num_anuladas|pluralize }} (no suman){% endif %}
     </p>
   </div>
   <div class="encabezado-acciones">
@@ -30,17 +31,21 @@
           {% th_orden 'Cajero' 'cajero' %}
           {% th_orden 'Artículos' 'productos' 'text-end' %}
           {% th_orden 'Total' 'total' 'text-end' %}
+          {% th_orden 'Pago' 'pago' %}
+          {% th_orden 'Estado' 'estado' %}
           <th class="text-end">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {% for venta in ventas %}
-          <tr>
+          <tr class="{% if venta.anulada %}fila-anulada{% endif %}">
             <td class="col-codigo">{{ venta.codigo }}</td>
             <td class="text-nowrap">{{ venta.fecha|date:"d/m/Y" }}<span class="celda-secundaria">{{ venta.fecha|date:"H:i" }}</span></td>
             <td>{{ venta.usuario_cajero.get_username }}</td>
             <td class="col-num">{{ venta.num_productos|cantidad }}</td>
-            <td class="col-num fw-medium">{{ venta.total|moneda }}</td>
+            <td class="col-num fw-medium monto-venta">{{ venta.total|moneda }}</td>
+            <td><i class="bi {% if venta.metodo_pago == 'tarjeta' %}bi-credit-card{% else %}bi-cash-coin{% endif %} me-1 text-muted"></i>{{ venta.get_metodo_pago_display }}</td>
+            <td>{% if venta.anulada %}<span class="badge-estado badge-estado-alerta">Anulada</span>{% else %}<span class="badge-estado badge-estado-si">Completada</span>{% endif %}</td>
             <td class="text-end">
               <a href="{% url 'dashboard:venta_detail' venta.pk %}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-eye"></i> Ver detalle

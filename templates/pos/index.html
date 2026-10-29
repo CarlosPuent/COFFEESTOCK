@@ -150,6 +150,31 @@
           <span class="carrito-total-label">Total</span>
           <span class="carrito-total-valor" id="carrito-total">$0.00</span>
         </div>
+
+        <div class="pago mt-3">
+          <div class="pago-metodos" role="radiogroup" aria-label="Método de pago">
+            <button type="button" class="pago-metodo active" data-metodo="efectivo" role="radio" aria-checked="true">
+              <i class="bi bi-cash-coin me-1"></i>Efectivo
+            </button>
+            <button type="button" class="pago-metodo" data-metodo="tarjeta" role="radio" aria-checked="false">
+              <i class="bi bi-credit-card me-1"></i>Tarjeta
+            </button>
+          </div>
+
+          <div id="pago-efectivo" class="mt-2">
+            <label for="monto-recibido" class="pago-etiqueta">Recibido</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" id="monto-recibido" class="form-control" min="0" step="0.01" inputmode="decimal" placeholder="Monto exacto">
+            </div>
+            <div class="pago-rapido" id="pago-rapido"></div>
+            <div class="pago-cambio">
+              <span id="cambio-etiqueta">Cambio</span>
+              <strong id="cambio-valor">$0.00</strong>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           id="confirmar-venta-btn"
@@ -174,6 +199,25 @@
 
 <div class="pos-toast-container" id="pos-toast-container" aria-live="polite" aria-atomic="true"></div>
 
+<div class="modal fade" id="modalVentaOk" tabindex="-1" aria-labelledby="modalVentaOkTitulo" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content text-center">
+      <div class="modal-body p-4">
+        <div class="venta-ok-icono"><i class="bi bi-check-lg"></i></div>
+        <h2 class="modal-title mb-1" id="modalVentaOkTitulo">Venta registrada</h2>
+        <div class="col-codigo mb-3" id="venta-ok-folio"></div>
+        <div class="venta-ok-fila"><span>Total</span><strong id="venta-ok-total"></strong></div>
+        <div class="venta-ok-fila"><span>Pago</span><strong id="venta-ok-metodo"></strong></div>
+        <div class="venta-ok-fila venta-ok-cambio" id="venta-ok-cambio-fila"><span>Cambio</span><strong id="venta-ok-cambio"></strong></div>
+      </div>
+      <div class="modal-footer justify-content-center gap-2">
+        <button type="button" class="btn btn-outline-secondary" id="venta-ok-ticket"><i class="bi bi-printer me-1"></i>Imprimir ticket</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal" id="venta-ok-nueva"><i class="bi bi-plus-lg me-1"></i>Nueva venta</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   (function () {
     var carrito = {};
@@ -186,6 +230,15 @@
     var confirmarBtn = document.getElementById("confirmar-venta-btn");
     var alertContainer = document.getElementById("pos-alert-container");
     var confirmarUrl = '{% url "pos:confirmar_venta" %}';
+
+    /* --- Pago: método, monto recibido y cambio --- */
+    var metodoPago = "efectivo";
+    var montoInput = document.getElementById("monto-recibido");
+    var pagoEfectivoEl = document.getElementById("pago-efectivo");
+    var pagoRapidoEl = document.getElementById("pago-rapido");
+    var cambioEtiqueta = document.getElementById("cambio-etiqueta");
+    var cambioValor = document.getElementById("cambio-valor");
+    var DENOMINACIONES = [1, 5, 10, 20, 50, 100];
 
     /* --- Filtro: búsqueda en vivo + pestañas de categoría (solo presentación) --- */
     var buscadorInput = document.getElementById("producto-buscador");
@@ -433,6 +486,103 @@
 
       carritoTotalEl.textContent = formatMoney(calcularTotal());
       actualizarResumenMovil();
+      actualizarPago();
+    }
+
+    function montoRecibido() {
+      var valor = parseFloat(montoInput.value);
+      return isNaN(valor) ? null : valor;
+    }
+
+    function sugerenciasDePago(total) {
+      var opciones = [];
+      DENOMINACIONES.forEach(function (billete) {
+        var monto = Math.ceil(total / billete) * billete;
+        if (monto > total + 0.001 && opciones.indexOf(monto) === -1) opciones.push(monto);
+      });
+      return opciones.slice(0, 3);
+    }
+
+    function pintarPagoRapido(total) {
+      pagoRapidoEl.innerHTML = "";
+      if (total <= 0) return;
+      [{ etiqueta: "Exacto", monto: total }]
+        .concat(sugerenciasDePago(total).map(function (m) { return { etiqueta: "$" + m, monto: m }; }))
+        .forEach(function (op) {
+          var b = document.createElement("button");
+          b.type = "button";
+          b.className = "pago-rapido-btn";
+          b.textContent = op.etiqueta;
+          b.addEventListener("click", function () {
+            montoInput.value = op.monto.toFixed(2);
+            actualizarPago();
+          });
+          pagoRapidoEl.appendChild(b);
+        });
+    }
+
+    function actualizarPago() {
+      var total = calcularTotal();
+      var vacio = Object.keys(carrito).length === 0;
+      var esEfectivo = metodoPago === "efectivo";
+      pagoEfectivoEl.hidden = !esEfectivo;
+
+      var falta = false;
+      if (esEfectivo) {
+        var recibido = montoRecibido();
+        if (recibido === null) {
+          cambioEtiqueta.textContent = "Cambio";
+          cambioValor.textContent = formatMoney(0);
+        } else if (recibido + 0.001 < total) {
+          falta = true;
+          cambioEtiqueta.textContent = "Falta";
+          cambioValor.textContent = formatMoney(total - recibido);
+        } else {
+          cambioEtiqueta.textContent = "Cambio";
+          cambioValor.textContent = formatMoney(recibido - total);
+        }
+        cambioValor.classList.toggle("pago-falta", falta);
+        cambioEtiqueta.classList.toggle("pago-falta", falta);
+        if (pagoRapidoEl.dataset.total !== total.toFixed(2)) {
+          pagoRapidoEl.dataset.total = total.toFixed(2);
+          pintarPagoRapido(total);
+        }
+      }
+      confirmarBtn.disabled = vacio || falta;
+    }
+
+    document.querySelectorAll(".pago-metodo").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        metodoPago = btn.dataset.metodo;
+        document.querySelectorAll(".pago-metodo").forEach(function (b) {
+          var activo = b === btn;
+          b.classList.toggle("active", activo);
+          b.setAttribute("aria-checked", activo ? "true" : "false");
+        });
+        actualizarPago();
+      });
+    });
+    montoInput.addEventListener("input", actualizarPago);
+
+    /* --- Ventana de venta registrada --- */
+    // Bootstrap se carga al final de la página: la ventana se crea al usarla.
+    var modalVentaOkEl = document.getElementById("modalVentaOk");
+    var ticketUrlActual = null;
+    document.getElementById("venta-ok-ticket").addEventListener("click", function () {
+      if (ticketUrlActual) window.open(ticketUrlActual + "?imprimir=1", "_blank", "width=420,height=720");
+    });
+
+    function mostrarVentaRegistrada(data) {
+      ticketUrlActual = data.ticket_url;
+      document.getElementById("venta-ok-folio").textContent = data.folio;
+      document.getElementById("venta-ok-total").textContent = formatMoney(parseFloat(data.total));
+      document.getElementById("venta-ok-metodo").textContent = data.metodo_pago;
+      var filaCambio = document.getElementById("venta-ok-cambio-fila");
+      filaCambio.hidden = data.cambio === null;
+      if (data.cambio !== null) {
+        document.getElementById("venta-ok-cambio").textContent = formatMoney(parseFloat(data.cambio));
+      }
+      bootstrap.Modal.getOrCreateInstance(modalVentaOkEl).show();
     }
 
     document.querySelectorAll(".producto-card").forEach(function (btn) {
@@ -481,7 +631,11 @@
           "Content-Type": "application/json",
           "X-CSRFToken": csrftoken,
         },
-        body: JSON.stringify({ items: items }),
+        body: JSON.stringify({
+          items: items,
+          metodo_pago: metodoPago,
+          monto_recibido: metodoPago === "efectivo" ? montoRecibido() : null,
+        }),
       })
         .then(function (response) {
           return response.json().then(function (data) {
@@ -490,14 +644,9 @@
         })
         .then(function (result) {
           if (result.ok && result.data.success) {
-            mostrarAlerta(
-              '<i class="bi bi-check-circle-fill me-1"></i>Venta #' +
-                result.data.venta_id +
-                " registrada correctamente. Total: " +
-                formatMoney(parseFloat(result.data.total)),
-              "success",
-            );
+            mostrarVentaRegistrada(result.data);
             carrito = {};
+            montoInput.value = "";
             renderCarrito();
           } else {
             mostrarAlerta(
@@ -505,7 +654,7 @@
                 (result.data.error || "No se pudo registrar la venta."),
               "danger",
             );
-            confirmarBtn.disabled = false;
+            actualizarPago();
           }
         })
         .catch(function () {
@@ -513,7 +662,7 @@
             '<i class="bi bi-exclamation-triangle-fill me-1"></i>Error de conexión al confirmar la venta. Intenta de nuevo.',
             "danger",
           );
-          confirmarBtn.disabled = false;
+          actualizarPago();
         })
         .finally(function () {
           confirmarBtn.innerHTML =

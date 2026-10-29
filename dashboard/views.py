@@ -9,19 +9,22 @@ from django.db.models import (
     Sum, Value, When,
 )
 from django.db.models.functions import Coalesce, TruncDate
-from django.shortcuts import redirect
+from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from django.views import View
 from django.views.generic import (
     CreateView, DeleteView, DetailView, ListView, TemplateView, UpdateView,
 )
 
 from core.mixins import GroupRequiredMixin
 from core.services.alertas import estado_configuracion
+from core.services.ventas import VentaError, anular_venta
 from core.models import DetalleVenta, Insumo, Merma, Producto, RecetaInsumo, Venta
 
 from .forms import (
     RECETA_INSUMO_FORMSET_PREFIX,
+    AnularVentaForm,
     InsumoFilterForm,
     InsumoForm,
     MermaFilterForm,
@@ -79,7 +82,7 @@ class DashboardIndexView(GroupRequiredMixin, TemplateView):
         ventas_por_dia = {
             row['dia']: row['total_dia']
             for row in (
-                Venta.objects.filter(fecha__gte=inicio_7d_dt)
+                Venta.objects.completadas().filter(fecha__gte=inicio_7d_dt)
                 .annotate(dia=TruncDate('fecha'))
                 .values('dia')
                 .annotate(total_dia=Sum('total'))
@@ -98,7 +101,9 @@ class DashboardIndexView(GroupRequiredMixin, TemplateView):
         inicio_30d_dt = timezone.make_aware(datetime.datetime.combine(inicio_30d, datetime.time.min))
 
         top_productos = list(
-            DetalleVenta.objects.filter(venta__fecha__gte=inicio_30d_dt)
+            DetalleVenta.objects.filter(
+                venta__fecha__gte=inicio_30d_dt, venta__estado=Venta.Estado.COMPLETADA,
+            )
             .values('producto__nombre')
             .annotate(cantidad_total=Sum('cantidad'))
             .order_by('-cantidad_total')[:5]
@@ -416,6 +421,8 @@ class VentaListView(ListadoMixin, GroupRequiredMixin, ListView):
         'cajero': 'usuario_cajero__username',
         'productos': 'num_productos',
         'total': 'total',
+        'pago': 'metodo_pago',
+        'estado': 'estado',
     }
     orden_defecto = '-fecha'
 
@@ -439,11 +446,17 @@ class VentaListView(ListadoMixin, GroupRequiredMixin, ListView):
             queryset = queryset.filter(total__gte=datos['total_min'])
         if datos.get('total_max') is not None:
             queryset = queryset.filter(total__lte=datos['total_max'])
+        if datos.get('metodo_pago'):
+            queryset = queryset.filter(metodo_pago=datos['metodo_pago'])
+        if datos.get('estado'):
+            queryset = queryset.filter(estado=datos['estado'])
         return filtrar_por_fechas(queryset, datos)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['monto_total'] = self.get_queryset_filtrado().aggregate(total=Sum('total'))['total'] or 0
+        filtrado = self.get_queryset_filtrado()
+        context['monto_total'] = filtrado.completadas().aggregate(total=Sum('total'))['total'] or 0
+        context['num_anuladas'] = filtrado.filter(estado=Venta.Estado.ANULADA).count()
         return context
 
 
@@ -454,6 +467,31 @@ class VentaDetailView(GroupRequiredMixin, DetailView):
     allowed_groups = ['Administrador']
 
     def get_queryset(self):
-        return Venta.objects.select_related('usuario_cajero').prefetch_related(
+        return Venta.objects.select_related('usuario_cajero', 'anulada_por').prefetch_related(
             'detalles__producto'
         )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_anular'] = kwargs.get('form_anular') or AnularVentaForm()
+        return context
+
+
+class AnularVentaView(GroupRequiredMixin, View):
+    allowed_groups = ['Administrador']
+
+    def post(self, request, pk):
+        venta = get_object_or_404(Venta, pk=pk)
+        form = AnularVentaForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, 'Indica el motivo de la anulación.')
+            return redirect('dashboard:venta_detail', pk=pk)
+        try:
+            anular_venta(venta, usuario=request.user, motivo=form.cleaned_data['motivo'])
+        except VentaError as exc:
+            messages.error(request, str(exc))
+        else:
+            messages.success(
+                request, f'Venta {venta.codigo} anulada. Se devolvió al inventario lo que había consumido.'
+            )
+        return redirect('dashboard:venta_detail', pk=pk)

@@ -31,4 +31,5 @@ urlpatterns = [
 
     path('ventas/', views.VentaListView.as_view(), name='venta_list'),
     path('ventas/<int:pk>/', views.VentaDetailView.as_view(), name='venta_detail'),
+    path('ventas/<int:pk>/anular/', views.AnularVentaView.as_view(), name='venta_anular'),
 ]

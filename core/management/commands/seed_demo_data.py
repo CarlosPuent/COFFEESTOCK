@@ -8,9 +8,16 @@ from django.db import connection, transaction
 from django.db.models import F
 from django.utils import timezone
 
-from core.models import DetalleVenta, Insumo, Merma, Producto, RecetaInsumo, Venta
+from core.models import (
+    Compra, DetalleCompra, DetalleVenta, Insumo, Merma, Producto, Proveedor, RecetaInsumo, Venta,
+)
 
 User = get_user_model()
+
+# En orden: primero lo que depende de otros modelos.
+MODELOS_A_REINICIAR = [
+    DetalleVenta, Venta, Merma, DetalleCompra, Compra, Proveedor, RecetaInsumo, Producto, Insumo,
+]
 
 
 class Command(BaseCommand):
@@ -23,7 +30,7 @@ class Command(BaseCommand):
         parser.add_argument(
             '--reset',
             action='store_true',
-            help='Elimina insumos, productos, recetas, ventas y mermas existentes antes de sembrar.',
+            help='Elimina los datos del negocio (no los usuarios) antes de sembrar.',
         )
 
     def handle(self, *args, **options):
@@ -31,18 +38,7 @@ class Command(BaseCommand):
 
         hay_datos = Insumo.objects.exists() or Producto.objects.exists() or Venta.objects.exists()
 
-        if reset:
-            self.stdout.write('Eliminando datos existentes (insumos, productos, ventas, mermas)...')
-            DetalleVenta.objects.all().delete()
-            Venta.objects.all().delete()
-            Merma.objects.all().delete()
-            RecetaInsumo.objects.all().delete()
-            Producto.objects.all().delete()
-            Insumo.objects.all().delete()
-            self._reiniciar_numeracion(
-                [DetalleVenta, Venta, Merma, RecetaInsumo, Producto, Insumo]
-            )
-        elif hay_datos:
+        if not reset and hay_datos:
             respuesta = input(
                 'Ya existen insumos, productos o ventas en la base de datos.\n'
                 'Continuar puede duplicar información. ¿Deseas continuar de todas formas? [y/N]: '
@@ -53,7 +49,14 @@ class Command(BaseCommand):
                 ))
                 return
 
+        # Borrado y carga en una sola transacción: si algo falla, no se pierde nada.
         with transaction.atomic():
+            if reset:
+                self.stdout.write('Eliminando datos existentes...')
+                for modelo in MODELOS_A_REINICIAR:
+                    modelo.objects.all().delete()
+                self._reiniciar_numeracion(MODELOS_A_REINICIAR)
+
             insumos = self._crear_insumos()
             productos = self._crear_productos()
             self._crear_recetas(productos, insumos)
@@ -92,16 +95,18 @@ class Command(BaseCommand):
         # Dos insumos quedan deliberadamente por debajo de su mínimo para
         # que el dashboard muestre alertas de stock de inmediato.
         datos = [
-            ('Leche entera', Insumo.UnidadMedida.MILILITROS, Decimal('8000'), Decimal('2000'), Decimal('0.02')),
-            ('Leche de almendra', Insumo.UnidadMedida.MILILITROS, Decimal('3000'), Decimal('1500'), Decimal('0.04')),
-            ('Café en grano arábica', Insumo.UnidadMedida.GRAMOS, Decimal('4000'), Decimal('1000'), Decimal('0.08')),
-            ('Café en grano robusta', Insumo.UnidadMedida.GRAMOS, Decimal('350'), Decimal('500'), Decimal('0.06')),
-            ('Sirope de vainilla', Insumo.UnidadMedida.MILILITROS, Decimal('1500'), Decimal('500'), Decimal('0.05')),
-            ('Sirope de caramelo', Insumo.UnidadMedida.MILILITROS, Decimal('120'), Decimal('500'), Decimal('0.05')),
-            ('Harina de trigo', Insumo.UnidadMedida.GRAMOS, Decimal('6000'), Decimal('2000'), Decimal('0.01')),
-            ('Azúcar', Insumo.UnidadMedida.GRAMOS, Decimal('5000'), Decimal('1500'), Decimal('0.008')),
-            ('Chocolate en polvo', Insumo.UnidadMedida.GRAMOS, Decimal('2500'), Decimal('800'), Decimal('0.03')),
-            ('Mantequilla', Insumo.UnidadMedida.GRAMOS, Decimal('3000'), Decimal('1000'), Decimal('0.015')),
+            ('Leche entera', Insumo.UnidadMedida.MILILITROS, Decimal('8000'), Decimal('2000'), Decimal('0.0012')),
+            ('Leche de almendra', Insumo.UnidadMedida.MILILITROS, Decimal('3000'), Decimal('1500'), Decimal('0.0035')),
+            ('Café en grano arábica', Insumo.UnidadMedida.GRAMOS, Decimal('4000'), Decimal('1000'), Decimal('0.0220')),
+            ('Café en grano robusta', Insumo.UnidadMedida.GRAMOS, Decimal('350'), Decimal('500'), Decimal('0.0150')),
+            ('Sirope de vainilla', Insumo.UnidadMedida.MILILITROS, Decimal('1500'), Decimal('500'), Decimal('0.0120')),
+            ('Sirope de caramelo', Insumo.UnidadMedida.MILILITROS, Decimal('120'), Decimal('500'), Decimal('0.0120')),
+            ('Harina de trigo', Insumo.UnidadMedida.GRAMOS, Decimal('6000'), Decimal('2000'), Decimal('0.0012')),
+            ('Azúcar', Insumo.UnidadMedida.GRAMOS, Decimal('5000'), Decimal('1500'), Decimal('0.0011')),
+            ('Chocolate en polvo', Insumo.UnidadMedida.GRAMOS, Decimal('2500'), Decimal('800'), Decimal('0.0090')),
+            ('Mantequilla', Insumo.UnidadMedida.GRAMOS, Decimal('3000'), Decimal('1000'), Decimal('0.0080')),
+            ('Huevo', Insumo.UnidadMedida.UNIDAD, Decimal('60'), Decimal('24'), Decimal('0.1500')),
+            ('Vaso para llevar 12 oz', Insumo.UnidadMedida.UNIDAD, Decimal('300'), Decimal('100'), Decimal('0.1200')),
         ]
 
         insumos = {}
@@ -126,14 +131,14 @@ class Command(BaseCommand):
 
     def _crear_productos(self):
         datos = [
-            ('Espresso', Producto.Categoria.BEBIDA, Decimal('28')),
-            ('Americano', Producto.Categoria.BEBIDA, Decimal('30')),
-            ('Cappuccino', Producto.Categoria.BEBIDA, Decimal('38')),
-            ('Latte Vainilla', Producto.Categoria.BEBIDA, Decimal('42')),
-            ('Mocha', Producto.Categoria.BEBIDA, Decimal('45')),
-            ('Croissant', Producto.Categoria.REPOSTERIA, Decimal('32')),
-            ('Muffin de chocolate', Producto.Categoria.REPOSTERIA, Decimal('35')),
-            ('Brownie', Producto.Categoria.REPOSTERIA, Decimal('38')),
+            ('Espresso', Producto.Categoria.BEBIDA, Decimal('1.75')),
+            ('Americano', Producto.Categoria.BEBIDA, Decimal('2.00')),
+            ('Cappuccino', Producto.Categoria.BEBIDA, Decimal('2.75')),
+            ('Latte Vainilla', Producto.Categoria.BEBIDA, Decimal('3.25')),
+            ('Mocha', Producto.Categoria.BEBIDA, Decimal('3.50')),
+            ('Croissant', Producto.Categoria.REPOSTERIA, Decimal('2.25')),
+            ('Muffin de chocolate', Producto.Categoria.REPOSTERIA, Decimal('2.50')),
+            ('Brownie', Producto.Categoria.REPOSTERIA, Decimal('2.75')),
         ]
 
         productos = {}
@@ -150,23 +155,24 @@ class Command(BaseCommand):
     # ------------------------------------------------------------------
 
     def _crear_recetas(self, productos, insumos):
+        vaso = ('Vaso para llevar 12 oz', 1)
         recetas = {
-            'Espresso': [('Café en grano arábica', 18)],
-            'Americano': [('Café en grano arábica', 18)],
-            'Cappuccino': [('Café en grano arábica', 18), ('Leche entera', 120)],
+            'Espresso': [('Café en grano arábica', 18), vaso],
+            'Americano': [('Café en grano arábica', 18), vaso],
+            'Cappuccino': [('Café en grano arábica', 18), ('Leche entera', 120), vaso],
             'Latte Vainilla': [
-                ('Café en grano arábica', 18), ('Leche entera', 200), ('Sirope de vainilla', 20),
+                ('Café en grano arábica', 18), ('Leche entera', 200), ('Sirope de vainilla', 20), vaso,
             ],
             'Mocha': [
-                ('Café en grano arábica', 18), ('Leche entera', 150), ('Chocolate en polvo', 25),
+                ('Café en grano arábica', 18), ('Leche entera', 150), ('Chocolate en polvo', 25), vaso,
             ],
             'Croissant': [('Harina de trigo', 80), ('Mantequilla', 40)],
             'Muffin de chocolate': [
-                ('Harina de trigo', 60), ('Azúcar', 30), ('Chocolate en polvo', 20),
+                ('Harina de trigo', 60), ('Azúcar', 30), ('Chocolate en polvo', 20), ('Huevo', 1),
             ],
             'Brownie': [
                 ('Harina de trigo', 50), ('Chocolate en polvo', 40),
-                ('Mantequilla', 30), ('Azúcar', 35),
+                ('Mantequilla', 30), ('Azúcar', 35), ('Huevo', 1),
             ],
         }
 
@@ -235,10 +241,21 @@ class Command(BaseCommand):
                 subtotal = producto.precio_venta * cantidad
                 total += subtotal
                 DetalleVenta.objects.create(
-                    venta=venta, producto=producto, cantidad=cantidad, subtotal=subtotal
+                    venta=venta, producto=producto, cantidad=cantidad,
+                    precio_unitario=producto.precio_venta, subtotal=subtotal,
                 )
 
-            Venta.objects.filter(pk=venta.pk).update(total=total, fecha=momento)
+            # 7 de cada 10 ventas en efectivo, con el billete más cercano.
+            if random.random() < 0.7:
+                metodo = Venta.MetodoPago.EFECTIVO
+                billete = random.choice([1, 5, 10, 20])
+                recibido = (total / billete).to_integral_value(rounding='ROUND_CEILING') * billete
+            else:
+                metodo, recibido = Venta.MetodoPago.TARJETA, None
+
+            Venta.objects.filter(pk=venta.pk).update(
+                total=total, fecha=momento, metodo_pago=metodo, monto_recibido=recibido,
+            )
 
     # ------------------------------------------------------------------
     # Mermas

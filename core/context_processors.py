@@ -1,3 +1,6 @@
+from django.conf import settings
+
+
 def user_groups(request):
     """Expone banderas de grupo al contexto de todos los templates."""
     is_administrador = False
@@ -12,3 +15,7 @@ def user_groups(request):
         'is_administrador': is_administrador,
         'is_cajero': is_cajero,
     }
+
+
+def negocio(request):
+    return {'negocio': settings.NEGOCIO}

@@ -1663,3 +1663,99 @@ form .tarjeta-ancha ~ .formulario-acciones {
   font-weight: var(--fw-btn);
   color: var(--coffee-danger);
 }
+
+/* ---------- POS: pago ---------- */
+
+.pago-metodos {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+  background-color: var(--coffee-bg);
+  padding: 0.25rem;
+  border-radius: 0.65rem;
+}
+.pago-metodo {
+  border: none;
+  background: transparent;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.5rem;
+  font-weight: var(--fw-btn);
+  font-size: var(--fs-small);
+  color: var(--coffee-text-muted);
+}
+.pago-metodo.active {
+  background-color: var(--coffee-card);
+  color: var(--coffee-text);
+  box-shadow: var(--coffee-shadow);
+}
+.pago-etiqueta {
+  font-size: 0.72rem;
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--coffee-text-muted);
+  margin-bottom: 0.25rem;
+}
+.pago-rapido {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+.pago-rapido-btn {
+  flex: 1 1 auto;
+  border: 1px solid var(--coffee-border);
+  background-color: var(--coffee-card);
+  border-radius: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-label);
+  color: var(--coffee-text);
+}
+.pago-rapido-btn:hover {
+  border-color: var(--coffee-accent);
+  color: var(--coffee-accent-hover);
+}
+.pago-cambio {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 0.6rem;
+  color: var(--coffee-text-muted);
+}
+.pago-cambio strong {
+  font-size: 1.1rem;
+  color: var(--coffee-success);
+}
+.pago-cambio .pago-falta,
+.pago-cambio strong.pago-falta {
+  color: var(--coffee-danger);
+}
+.venta-ok-icono {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  margin: 0 auto 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  color: #fff;
+  background-color: var(--coffee-success);
+}
+.venta-ok-fila {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px dashed var(--coffee-border);
+}
+.venta-ok-cambio strong {
+  color: var(--coffee-success);
+  font-size: 1.1rem;
+}
+.fila-anulada > td {
+  color: var(--coffee-text-muted) !important;
+}
+.fila-anulada .monto-venta {
+  text-decoration: line-through;
+}
