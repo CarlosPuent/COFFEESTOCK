@@ -13,7 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 from python_http_client.exceptions import ForbiddenError
 
-from core.models import Insumo, Producto, RecetaInsumo
+from core.models import Compra, Insumo, Producto, RecetaInsumo
 from core.services.alertas import enviar_alerta_stock, enviar_correo
 
 User = get_user_model()
@@ -217,3 +217,50 @@ class FormatoTests(TestCase):
         self.assertEqual(cantidad('8000.00'), '8,000')
         self.assertEqual(cantidad('12.50'), '12.5')
         self.assertEqual(unidad_corta('unidad'), 'u')
+
+
+@override_settings(**CONSOLA)
+class CompraTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_user('admin', password='x')
+        self.admin.groups.add(Group.objects.create(name='Administrador'))
+        self.client.force_login(self.admin)
+        self.cafe = crear_insumo(
+            nombre='Café', unidad_medida='g', stock_actual=Decimal('1000'),
+            stock_minimo=Decimal('2000'), costo_unitario=Decimal('0.0180'),
+            alerta_pendiente=True, ultima_alerta_enviada=timezone.now(),
+        )
+
+    def test_costo_promedio_ponderado_y_alerta_limpia(self):
+        from core.services.inventario import registrar_compra
+
+        compra = registrar_compra(usuario=self.admin, lineas=[(self.cafe, Decimal('3000'), Decimal('66'))])
+        self.cafe.refresh_from_db()
+        # (1000 x 0.018 + 3000 x 0.022) / 4000 = 0.021
+        self.assertEqual(self.cafe.stock_actual, Decimal('4000'))
+        self.assertEqual(self.cafe.costo_unitario, Decimal('0.0210'))
+        self.assertFalse(self.cafe.alerta_pendiente)
+        self.assertIsNone(self.cafe.ultima_alerta_enviada)
+        self.assertEqual(compra.total, Decimal('66.00'))
+        self.assertEqual(compra.detalles.get().costo_unitario, Decimal('0.0220'))
+
+    def test_formulario_de_compra(self):
+        respuesta = self.client.post(reverse('dashboard:compra_create'), {
+            'fecha': timezone.localdate().isoformat(),
+            'numero_factura': 'F-123',
+            'lineas-TOTAL_FORMS': '1', 'lineas-INITIAL_FORMS': '0',
+            'lineas-MIN_NUM_FORMS': '1', 'lineas-MAX_NUM_FORMS': '1000',
+            'lineas-0-insumo': self.cafe.pk, 'lineas-0-cantidad': '500', 'lineas-0-monto': '10',
+        })
+        self.assertEqual(respuesta.status_code, 302)
+        self.cafe.refresh_from_db()
+        self.assertEqual(self.cafe.stock_actual, Decimal('1500'))
+
+    def test_compra_sin_lineas_no_se_guarda(self):
+        respuesta = self.client.post(reverse('dashboard:compra_create'), {
+            'fecha': timezone.localdate().isoformat(),
+            'lineas-TOTAL_FORMS': '0', 'lineas-INITIAL_FORMS': '0',
+            'lineas-MIN_NUM_FORMS': '1', 'lineas-MAX_NUM_FORMS': '1000',
+        })
+        self.assertEqual(respuesta.status_code, 200)
+        self.assertFalse(Compra.objects.exists())

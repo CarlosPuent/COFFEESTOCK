@@ -32,12 +32,14 @@ class FiltroForm(forms.Form):
                 widget.attrs.setdefault('class', 'form-control form-control-sm')
 
 
-def buscar_por_nombre_o_codigo(queryset, texto, prefijo, campo='nombre'):
-    """Busca por nombre o por código (INS-0007, ins7, 7)."""
+def buscar_por_nombre_o_codigo(queryset, texto, prefijo, campo='nombre', otros_campos=()):
+    """Busca por nombre (u otros campos de texto) o por código (INS-0007, ins7, 7)."""
     texto = (texto or '').strip()
     if not texto:
         return queryset
     condicion = Q(**{f'{campo}__icontains': texto})
+    for otro in otros_campos:
+        condicion |= Q(**{f'{otro}__icontains': texto})
     coincide = re.fullmatch(rf'(?:{prefijo}-?)?0*(\d+)', texto, flags=re.IGNORECASE)
     if coincide:
         condicion |= Q(pk=int(coincide.group(1)))

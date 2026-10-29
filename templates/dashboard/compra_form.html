@@ -1,0 +1,166 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Registrar compra - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-bag-plus me-2"></i>Registrar compra</h1>
+    <p class="encabezado-resumen">Al guardar se suma el stock de cada insumo y su costo se actualiza con el promedio ponderado.</p>
+  </div>
+</div>
+
+<form method="post" novalidate id="form-compra">
+  {% csrf_token %}
+
+  <div class="tarjeta-formulario tarjeta-ancha mb-3">
+    <h2 class="titulo-bloque">Datos de la compra</h2>
+    <div class="row g-3">
+      <div class="col-md-4">{{ form.proveedor|as_crispy_field }}</div>
+      <div class="col-md-4">{{ form.fecha|as_crispy_field }}</div>
+      <div class="col-md-4">{{ form.numero_factura|as_crispy_field }}</div>
+      <div class="col-12">{{ form.observacion|as_crispy_field }}</div>
+    </div>
+  </div>
+
+  <div class="tarjeta-formulario tarjeta-ancha">
+    <h2 class="titulo-bloque">Insumos recibidos</h2>
+    {{ formset.management_form }}
+    {% if formset.non_form_errors %}
+      <div class="alert alert-danger">{% for e in formset.non_form_errors %}{{ e }} {% endfor %}</div>
+    {% endif %}
+
+    <div class="table-responsive">
+      <table class="table align-middle tabla-lineas mb-0">
+        <thead>
+          <tr>
+            <th style="min-width: 220px;">Insumo</th>
+            <th style="width: 170px;">Cantidad</th>
+            <th style="width: 170px;">Monto pagado</th>
+            <th class="text-end">Costo unitario</th>
+            <th class="text-end">Costo actual</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="lineas-compra">
+          {% for linea in formset %}
+            <tr class="linea-compra">
+              <td>{{ linea.insumo }}{% for e in linea.insumo.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</td>
+              <td>
+                <div class="input-group input-group-sm">{{ linea.cantidad }}<span class="input-group-text unidad-linea">—</span></div>
+                {% for e in linea.cantidad.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </td>
+              <td>
+                <div class="input-group input-group-sm"><span class="input-group-text">$</span>{{ linea.monto }}</div>
+                {% for e in linea.monto.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </td>
+              <td class="col-num costo-nuevo">—</td>
+              <td class="col-num costo-actual text-muted">—</td>
+              <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger quitar-linea" title="Quitar" aria-label="Quitar línea"><i class="bi bi-x-lg"></i></button></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mt-3">
+      <button type="button" id="agregar-linea" class="btn btn-sm btn-outline-secondary"><i class="bi bi-plus-lg me-1"></i>Agregar insumo</button>
+      <div class="total-compra">Total de la compra <strong id="total-compra">$0.00</strong></div>
+    </div>
+  </div>
+
+  <div class="formulario-acciones">
+    <a href="{% url 'dashboard:compra_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Registrar compra</button>
+  </div>
+</form>
+
+<template id="plantilla-linea">
+  <tr class="linea-compra">
+    <td>{{ formset.empty_form.insumo }}</td>
+    <td><div class="input-group input-group-sm">{{ formset.empty_form.cantidad }}<span class="input-group-text unidad-linea">—</span></div></td>
+    <td><div class="input-group input-group-sm"><span class="input-group-text">$</span>{{ formset.empty_form.monto }}</div></td>
+    <td class="col-num costo-nuevo">—</td>
+    <td class="col-num costo-actual text-muted">—</td>
+    <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger quitar-linea" title="Quitar" aria-label="Quitar línea"><i class="bi bi-x-lg"></i></button></td>
+  </tr>
+</template>
+
+{{ insumos_info|json_script:"insumos-info" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var info = JSON.parse(document.getElementById('insumos-info').textContent);
+  var cuerpo = document.getElementById('lineas-compra');
+  var totalForms = document.getElementById('id_lineas-TOTAL_FORMS');
+  var plantilla = document.getElementById('plantilla-linea');
+  var totalEl = document.getElementById('total-compra');
+  var unidades = { g: 'g', ml: 'ml', unidad: 'u' };
+
+  function dinero(valor, decimales) {
+    return '$' + valor.toLocaleString('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: decimales || 2,
+    });
+  }
+
+  function actualizarLinea(fila) {
+    var insumo = info[fila.querySelector('select').value];
+    var cantidad = parseFloat(fila.querySelector('input[name$="-cantidad"]').value);
+    var monto = parseFloat(fila.querySelector('input[name$="-monto"]').value);
+    var unidad = insumo ? unidades[insumo.unidad] : '—';
+    fila.querySelector('.unidad-linea').textContent = unidad;
+    fila.querySelector('.costo-actual').textContent = insumo
+      ? dinero(parseFloat(insumo.costo), 4) + ' / ' + unidad : '—';
+    fila.querySelector('.costo-nuevo').textContent = (cantidad > 0 && monto >= 0)
+      ? dinero(monto / cantidad, 4) + ' / ' + unidad : '—';
+  }
+
+  function actualizarTotal() {
+    var total = 0;
+    cuerpo.querySelectorAll('input[name$="-monto"]').forEach(function (input) {
+      total += parseFloat(input.value) || 0;
+    });
+    totalEl.textContent = dinero(total);
+  }
+
+  function renumerar() {
+    // Mantiene los índices consecutivos para que el formset los lea todos.
+    cuerpo.querySelectorAll('tr.linea-compra').forEach(function (fila, i) {
+      fila.querySelectorAll('[name]').forEach(function (campo) {
+        campo.name = campo.name.replace(/lineas-(\d+|__prefix__)-/, 'lineas-' + i + '-');
+        if (campo.id) campo.id = campo.id.replace(/lineas-(\d+|__prefix__)-/, 'lineas-' + i + '-');
+      });
+    });
+    totalForms.value = cuerpo.querySelectorAll('tr.linea-compra').length;
+  }
+
+  document.getElementById('agregar-linea').addEventListener('click', function () {
+    var temporal = document.createElement('tbody');
+    temporal.innerHTML = plantilla.innerHTML.trim();
+    cuerpo.appendChild(temporal.firstElementChild);
+    renumerar();
+    cuerpo.lastElementChild.querySelector('select').focus();
+  });
+
+  cuerpo.addEventListener('click', function (e) {
+    var boton = e.target.closest('.quitar-linea');
+    if (!boton) return;
+    if (cuerpo.querySelectorAll('tr.linea-compra').length === 1) return;
+    boton.closest('tr').remove();
+    renumerar();
+    actualizarTotal();
+  });
+
+  cuerpo.addEventListener('input', function (e) {
+    actualizarLinea(e.target.closest('tr'));
+    actualizarTotal();
+  });
+  cuerpo.addEventListener('change', function (e) {
+    actualizarLinea(e.target.closest('tr'));
+  });
+
+  cuerpo.querySelectorAll('tr.linea-compra').forEach(actualizarLinea);
+  actualizarTotal();
+});
+</script>
+{% endblock %}

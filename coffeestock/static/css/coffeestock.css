@@ -1573,3 +1573,93 @@ th.text-end .th-orden {
 .col-nombre {
   min-width: 190px;
 }
+
+/* ---------- Menú lateral por secciones ---------- */
+
+.sidebar-nav {
+  gap: 0.1rem;
+}
+.sidebar-seccion {
+  list-style: none;
+  font-size: 0.68rem;
+  font-weight: var(--fw-btn);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+  padding: 0.9rem 0.85rem 0.3rem;
+}
+.sidebar-seccion:first-child {
+  padding-top: 0;
+}
+.sidebar-nav .sidebar-link {
+  padding: 0.45rem 0.85rem;
+}
+
+/* ---------- Formularios y fichas ---------- */
+
+.tarjeta-formulario {
+  background-color: var(--coffee-card);
+  border: 1px solid var(--coffee-border);
+  border-radius: var(--coffee-radius);
+  padding: 1.5rem;
+  max-width: 760px;
+}
+.tarjeta-ancha {
+  max-width: none;
+}
+.titulo-bloque {
+  font-size: 1.05rem;
+  margin-bottom: 1rem;
+}
+.formulario-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  max-width: 760px;
+}
+.tarjeta-ancha + .formulario-acciones,
+form .tarjeta-ancha ~ .formulario-acciones {
+  max-width: none;
+}
+.tabla-lineas > thead > tr > th {
+  background-color: transparent;
+}
+.tabla-lineas > tbody > tr > td {
+  padding: 0.6rem 0.5rem;
+}
+.total-compra {
+  color: var(--coffee-text-muted);
+}
+.total-compra strong {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--coffee-text);
+  margin-left: 0.5rem;
+}
+.dato-etiqueta {
+  font-size: 0.72rem;
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--coffee-text-muted);
+  margin-bottom: 0.15rem;
+}
+.dato-valor {
+  font-weight: 600;
+}
+.dato-destacado {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+}
+.fila-total > td {
+  font-weight: 700;
+  border-top: 2px solid var(--coffee-border) !important;
+}
+.enlace-alerta {
+  display: inline-block;
+  margin-top: 0.5rem;
+  font-size: var(--fs-small);
+  font-weight: var(--fw-btn);
+  color: var(--coffee-danger);
+}

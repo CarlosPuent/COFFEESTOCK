@@ -24,6 +24,7 @@
             <div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ insumo.nombre }}</div>
             <div>Stock actual: {{ insumo.stock_actual|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</div>
             <div>Stock mínimo: {{ insumo.stock_minimo|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</div>
+            <a href="{% url 'dashboard:compra_create' %}?insumo={{ insumo.pk }}" class="enlace-alerta"><i class="bi bi-bag-plus me-1"></i>Reabastecer</a>
           </div>
         </div>
       {% endfor %}

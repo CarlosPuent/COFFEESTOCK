@@ -1,6 +1,8 @@
 from django.contrib import admin
 
-from .models import DetalleVenta, Insumo, Merma, Producto, RecetaInsumo, Venta
+from .models import (
+    Compra, DetalleCompra, DetalleVenta, Insumo, Merma, Producto, Proveedor, RecetaInsumo, Venta,
+)
 
 
 @admin.register(Insumo)
@@ -53,3 +55,23 @@ class DetalleVentaAdmin(admin.ModelAdmin):
     list_display = ('venta', 'producto', 'cantidad', 'subtotal')
     list_filter = ('producto',)
     search_fields = ('producto__nombre', 'venta__id')
+
+
+@admin.register(Proveedor)
+class ProveedorAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'contacto', 'telefono', 'correo', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'contacto')
+
+
+class DetalleCompraInline(admin.TabularInline):
+    model = DetalleCompra
+    extra = 0
+
+
+@admin.register(Compra)
+class CompraAdmin(admin.ModelAdmin):
+    list_display = ('id', 'fecha', 'proveedor', 'numero_factura', 'total', 'usuario')
+    list_filter = ('fecha', 'proveedor')
+    search_fields = ('numero_factura', 'proveedor__nombre')
+    inlines = [DetalleCompraInline]

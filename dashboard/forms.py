@@ -1,8 +1,12 @@
+import datetime
+from decimal import Decimal
+
 from django import forms
 from django.contrib.auth import get_user_model
-from django.forms import inlineformset_factory
+from django.forms import formset_factory, inlineformset_factory
+from django.utils import timezone
 
-from core.models import Insumo, Merma, Producto, RecetaInsumo
+from core.models import Compra, Insumo, Merma, Producto, Proveedor, RecetaInsumo
 
 from .listados import FiltroForm
 
@@ -178,3 +182,93 @@ RecetaInsumoFormSet = inlineformset_factory(
     extra=1,
     can_delete=True,
 )
+
+
+# ---------------------------------------------------------------------------
+# Proveedores y compras
+# ---------------------------------------------------------------------------
+
+class ProveedorForm(forms.ModelForm):
+    class Meta:
+        model = Proveedor
+        fields = ['nombre', 'contacto', 'telefono', 'correo', 'notas', 'activo']
+        widgets = {'notas': forms.Textarea(attrs={'rows': 3})}
+        labels = {'correo': 'Correo electrónico'}
+
+
+class ProveedorFilterForm(FiltroForm):
+    q = forms.CharField(
+        required=False, label='Buscar',
+        widget=forms.TextInput(attrs={'placeholder': 'Nombre, contacto o código'}),
+    )
+    estado = forms.ChoiceField(required=False, label='Estado', choices=ESTADO_CHOICES)
+
+
+class CompraForm(forms.Form):
+    proveedor = forms.ModelChoiceField(
+        queryset=Proveedor.objects.filter(activo=True), required=False,
+        label='Proveedor', empty_label='Sin proveedor',
+    )
+    fecha = forms.DateField(
+        label='Fecha de la compra',
+        input_formats=['%Y-%m-%d', '%d/%m/%Y'],
+        widget=forms.DateInput(format='%Y-%m-%d', attrs={'data-fecha': '', 'autocomplete': 'off'}),
+    )
+    numero_factura = forms.CharField(label='N.º de factura', max_length=50, required=False)
+    observacion = forms.CharField(
+        label='Observación', required=False, widget=forms.Textarea(attrs={'rows': 2}),
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['fecha'].initial = timezone.localdate()
+
+    def clean_fecha(self):
+        fecha = self.cleaned_data['fecha']
+        if fecha > timezone.localdate():
+            raise forms.ValidationError('La fecha no puede ser futura.')
+        return fecha
+
+    def fecha_y_hora(self):
+        """Hoy: la hora actual. Otro día: el mediodía de esa fecha."""
+        fecha = self.cleaned_data['fecha']
+        if fecha == timezone.localdate():
+            return timezone.now()
+        return timezone.make_aware(datetime.datetime.combine(fecha, datetime.time(12, 0)))
+
+
+class DetalleCompraForm(forms.Form):
+    insumo = forms.ModelChoiceField(
+        queryset=Insumo.objects.filter(activo=True), label='Insumo',
+        empty_label='Selecciona un insumo',
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'}),
+    )
+    cantidad = forms.DecimalField(
+        label='Cantidad', min_value=Decimal('0.01'), max_digits=12, decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01'}),
+    )
+    monto = forms.DecimalField(
+        label='Monto pagado', min_value=Decimal('0'), max_digits=12, decimal_places=2,
+        widget=forms.NumberInput(attrs={'class': 'form-control form-control-sm', 'step': '0.01'}),
+    )
+
+
+DetalleCompraFormSet = formset_factory(
+    DetalleCompraForm, extra=0, min_num=1, validate_min=True,
+)
+DETALLE_COMPRA_PREFIX = 'lineas'
+
+
+class CompraFilterForm(FiltroForm):
+    q = forms.CharField(
+        required=False, label='Buscar',
+        widget=forms.TextInput(attrs={'placeholder': 'Folio o n.º de factura'}),
+    )
+    proveedor = forms.ModelChoiceField(
+        queryset=Proveedor.objects.all(), required=False, label='Proveedor', empty_label='Todos',
+    )
+    insumo = forms.ModelChoiceField(
+        queryset=Insumo.objects.all(), required=False, label='Insumo', empty_label='Todos',
+    )
+    fecha_desde = campo_fecha('Desde')
+    fecha_hasta = campo_fecha('Hasta')

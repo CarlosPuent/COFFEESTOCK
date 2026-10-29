@@ -1,0 +1,74 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load formato %}
+
+{% block title %}Compra {{ compra.codigo }} - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-bag me-2"></i>Compra <span class="col-codigo fs-5">{{ compra.codigo }}</span></h1>
+    <p class="encabezado-resumen">Registrada por {{ compra.usuario.get_username }} el {{ compra.fecha_registro|date:"d/m/Y H:i" }}</p>
+  </div>
+  <div class="encabezado-acciones">
+    <a href="{% url 'dashboard:compra_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Volver al listado</a>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="row row-cols-2 row-cols-md-4 g-3">
+      <div class="col">
+        <div class="dato-etiqueta">Fecha</div>
+        <div class="dato-valor">{{ compra.fecha|date:"d/m/Y" }}</div>
+      </div>
+      <div class="col">
+        <div class="dato-etiqueta">Proveedor</div>
+        <div class="dato-valor">{{ compra.proveedor.nombre|default:"Sin proveedor" }}</div>
+      </div>
+      <div class="col">
+        <div class="dato-etiqueta">Factura</div>
+        <div class="dato-valor">{{ compra.numero_factura|default:"—" }}</div>
+      </div>
+      <div class="col">
+        <div class="dato-etiqueta">Total</div>
+        <div class="dato-valor dato-destacado">{{ compra.total|moneda }}</div>
+      </div>
+    </div>
+    {% if compra.observacion %}
+      <div class="mt-3"><div class="dato-etiqueta">Observación</div><div>{{ compra.observacion }}</div></div>
+    {% endif %}
+  </div>
+</div>
+
+<h2 class="titulo-bloque">Insumos recibidos</h2>
+<div class="table-responsive tabla-contenedor">
+  <table class="table align-middle">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Insumo</th>
+        <th class="text-end">Cantidad</th>
+        <th class="text-end">Costo unitario</th>
+        <th class="text-end">Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for detalle in compra.detalles.all %}
+        <tr>
+          <td class="col-codigo">{{ detalle.insumo.codigo }}</td>
+          <td class="fw-medium">{{ detalle.insumo.nombre }}</td>
+          <td class="col-num">{{ detalle.cantidad|cantidad }} {{ detalle.insumo.unidad_medida|unidad_corta }}</td>
+          <td class="col-num">{{ detalle.costo_unitario|costo }} / {{ detalle.insumo.unidad_medida|unidad_corta }}</td>
+          <td class="col-num">{{ detalle.subtotal|moneda }}</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr class="fila-total">
+        <td colspan="4" class="text-end">Total</td>
+        <td class="col-num">{{ compra.total|moneda }}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+{% endblock %}

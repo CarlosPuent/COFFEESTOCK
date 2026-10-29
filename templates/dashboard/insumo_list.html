@@ -57,6 +57,7 @@
               {% endif %}
             </td>
             <td class="text-end text-nowrap">
+              <a href="{% url 'dashboard:compra_create' %}?insumo={{ insumo.pk }}" class="btn btn-sm btn-outline-primary" title="Reabastecer (registrar compra)" aria-label="Reabastecer {{ insumo.nombre }}"><i class="bi bi-bag-plus"></i></a>
               <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary" title="Editar" aria-label="Editar {{ insumo.nombre }}"><i class="bi bi-pencil-square"></i></a>
               <button
                 type="button"

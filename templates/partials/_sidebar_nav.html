@@ -1,53 +1,72 @@
 {% load static %}
-<ul class="nav nav-pills flex-column gap-1 mb-4">
+{% with nombre=request.resolver_match.url_name %}
+<ul class="nav nav-pills flex-column sidebar-nav mb-3">
   {% if is_administrador %}
+    <li class="sidebar-seccion">General</li>
     <li class="nav-item">
-      <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">
+      <a class="nav-link sidebar-link {% if nombre == 'index' %}active{% endif %}" href="{% url 'dashboard:index' %}">
         <i class="bi bi-speedometer2"></i> Inicio
       </a>
     </li>
+
+    <li class="sidebar-seccion">Ventas</li>
     <li class="nav-item">
-      <a class="nav-link sidebar-link {% if 'insumo' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:insumo_list' %}">
+      <a class="nav-link sidebar-link" href="{% url 'pos:index' %}">
+        <i class="bi bi-shop"></i> Punto de venta
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'venta' in nombre %}active{% endif %}" href="{% url 'dashboard:venta_list' %}">
+        <i class="bi bi-receipt"></i> Ventas
+      </a>
+    </li>
+
+    <li class="sidebar-seccion">Inventario</li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'insumo' in nombre %}active{% endif %}" href="{% url 'dashboard:insumo_list' %}">
         <i class="bi bi-box-seam"></i> Insumos
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link sidebar-link {% if 'producto' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:producto_list' %}">
+      <a class="nav-link sidebar-link {% if 'producto' in nombre %}active{% endif %}" href="{% url 'dashboard:producto_list' %}">
         <i class="bi bi-cup-hot"></i> Productos
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link sidebar-link {% if 'venta' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'dashboard:venta_list' %}">
-        <i class="bi bi-receipt"></i> Ventas
+      <a class="nav-link sidebar-link {% if 'compra' in nombre %}active{% endif %}" href="{% url 'dashboard:compra_list' %}">
+        <i class="bi bi-bag"></i> Compras
       </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'merma_list' %}active{% endif %}" href="{% url 'dashboard:merma_list' %}">
+      <a class="nav-link sidebar-link {% if 'proveedor' in nombre %}active{% endif %}" href="{% url 'dashboard:proveedor_list' %}">
+        <i class="bi bi-truck"></i> Proveedores
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'merma' in nombre %}active{% endif %}" href="{% url 'dashboard:merma_list' %}">
         <i class="bi bi-exclamation-triangle"></i> Mermas
       </a>
     </li>
+
+    <li class="sidebar-seccion">Análisis</li>
     <li class="nav-item">
       <span class="nav-link sidebar-link disabled"><i class="bi bi-bar-chart-line"></i> Reportes (próximamente)</span>
     </li>
+  {% else %}
+    <li class="sidebar-seccion">Turno</li>
     <li class="nav-item">
       <a class="nav-link sidebar-link" href="{% url 'pos:index' %}">
-        <i class="bi bi-shop"></i> Ir al POS
+        <i class="bi bi-shop"></i> Punto de venta
       </a>
     </li>
-  {% endif %}
-  <li class="nav-item">
-    <a class="nav-link sidebar-link {% if request.resolver_match.url_name == 'merma_create' %}active{% endif %}" href="{% url 'dashboard:merma_create' %}">
-      <i class="bi bi-clipboard2-plus"></i> Registrar merma
-    </a>
-  </li>
-  {% if is_cajero %}
     <li class="nav-item">
-      <a class="nav-link sidebar-link" href="{% url 'pos:index' %}">
-        <i class="bi bi-shop"></i> Volver al POS
+      <a class="nav-link sidebar-link {% if nombre == 'merma_create' %}active{% endif %}" href="{% url 'dashboard:merma_create' %}">
+        <i class="bi bi-clipboard2-plus"></i> Registrar merma
       </a>
     </li>
   {% endif %}
 </ul>
+{% endwith %}
 <hr class="text-white-50">
 <form method="post" action="{% url 'core:logout' %}">
   {% csrf_token %}

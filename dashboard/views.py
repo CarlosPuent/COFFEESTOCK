@@ -428,7 +428,7 @@ class VentaListView(ListadoMixin, GroupRequiredMixin, ListView):
     def filtrar(self, queryset, datos):
         queryset = buscar_por_nombre_o_codigo(
             queryset, datos.get('q'), Venta.PREFIJO, campo='usuario_cajero__username',
-        ) if datos.get('q') else queryset
+        )
         if datos.get('usuario_cajero'):
             queryset = queryset.filter(usuario_cajero=datos['usuario_cajero'])
         if datos.get('producto'):

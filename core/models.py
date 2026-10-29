@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+from django.utils import timezone
 
 
 def codigo(prefijo, pk, digitos=4):
@@ -69,6 +70,24 @@ class Insumo(models.Model):
             from core.services.alertas import programar_alerta_stock
             programar_alerta_stock(insumo.pk)
 
+        self.refresh_from_db()
+
+    @transaction.atomic
+    def registrar_entrada(self, cantidad, costo_unitario):
+        """Suma stock por una compra y recalcula el costo promedio ponderado.
+
+        Ejemplo: 1,000 g a $0.018 + compra de 1,000 g a $0.022 = 2,000 g a $0.020.
+        """
+        insumo = Insumo.objects.select_for_update().get(pk=self.pk)
+        stock_previo = max(insumo.stock_actual, Decimal('0'))
+        nuevo_stock = stock_previo + cantidad
+        if nuevo_stock > 0:
+            insumo.costo_unitario = (
+                (stock_previo * insumo.costo_unitario + cantidad * costo_unitario) / nuevo_stock
+            ).quantize(Decimal('0.0001'))
+        insumo.stock_actual = insumo.stock_actual + cantidad
+        insumo.save(update_fields=['stock_actual', 'costo_unitario', 'fecha_actualizacion'])
+        insumo.sincronizar_alerta()
         self.refresh_from_db()
 
     @property
@@ -249,3 +268,76 @@ class DetalleVenta(models.Model):
     @property
     def precio_unitario(self):
         return self.subtotal / self.cantidad if self.cantidad else self.subtotal
+
+
+class Proveedor(models.Model):
+    nombre = models.CharField(max_length=150)
+    contacto = models.CharField('persona de contacto', max_length=150, blank=True)
+    telefono = models.CharField('teléfono', max_length=30, blank=True)
+    correo = models.EmailField(blank=True)
+    notas = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    PREFIJO = 'PRV'
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name_plural = 'proveedores'
+        indexes = [models.Index(fields=['nombre'], name='idx_proveedor_nombre')]
+
+    def __str__(self):
+        return self.nombre
+
+    @property
+    def codigo(self):
+        return codigo(self.PREFIJO, self.pk, digitos=3)
+
+
+class Compra(models.Model):
+    """Entrada de inventario: mercadería recibida de un proveedor."""
+
+    proveedor = models.ForeignKey(
+        Proveedor, on_delete=models.PROTECT, related_name='compras', null=True, blank=True
+    )
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='compras'
+    )
+    fecha = models.DateTimeField(default=timezone.now)
+    numero_factura = models.CharField('número de factura', max_length=50, blank=True)
+    total = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0, validators=[MinValueValidator(0)]
+    )
+    observacion = models.TextField(blank=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    PREFIJO = 'C'
+
+    class Meta:
+        ordering = ['-fecha']
+        indexes = [models.Index(fields=['fecha'], name='idx_compra_fecha')]
+
+    def __str__(self):
+        return f'Compra {self.codigo}'
+
+    @property
+    def codigo(self):
+        return codigo(self.PREFIJO, self.pk, digitos=6)
+
+
+class DetalleCompra(models.Model):
+    compra = models.ForeignKey(Compra, on_delete=models.CASCADE, related_name='detalles')
+    insumo = models.ForeignKey(Insumo, on_delete=models.PROTECT, related_name='detalles_compra')
+    cantidad = models.DecimalField(
+        max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    costo_unitario = models.DecimalField(
+        max_digits=14, decimal_places=4, validators=[MinValueValidator(0)]
+    )
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)])
+
+    class Meta:
+        ordering = ['compra', 'id']
+
+    def __str__(self):
+        return f'{self.insumo} x{self.cantidad} (Compra #{self.compra_id})'
