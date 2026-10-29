@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_compras
+from . import views, views_compras, views_usuarios
 
 app_name = 'dashboard'
 
@@ -28,6 +28,14 @@ urlpatterns = [
     path('compras/', views_compras.CompraListView.as_view(), name='compra_list'),
     path('compras/nueva/', views_compras.CompraCreateView.as_view(), name='compra_create'),
     path('compras/<int:pk>/', views_compras.CompraDetailView.as_view(), name='compra_detail'),
+
+    path('usuarios/', views_usuarios.UsuarioListView.as_view(), name='usuario_list'),
+    path('usuarios/nuevo/', views_usuarios.UsuarioCreateView.as_view(), name='usuario_create'),
+    path('usuarios/<int:pk>/editar/', views_usuarios.UsuarioUpdateView.as_view(), name='usuario_update'),
+    path('usuarios/<int:pk>/contrasena/', views_usuarios.CambiarContrasenaView.as_view(), name='usuario_contrasena'),
+    path('usuarios/<int:pk>/estado/', views_usuarios.CambiarEstadoUsuarioView.as_view(), name='usuario_estado'),
+
+    path('corte-de-caja/', views_usuarios.CorteCajaView.as_view(), name='corte_caja'),
 
     path('ventas/', views.VentaListView.as_view(), name='venta_list'),
     path('ventas/<int:pk>/', views.VentaDetailView.as_view(), name='venta_detail'),

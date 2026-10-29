@@ -1,0 +1,79 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load listados %}
+
+{% block title %}Usuarios - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-people me-2"></i>Usuarios</h1>
+    <p class="encabezado-resumen">{{ total_resultados }} usuario{{ total_resultados|pluralize }} · quién puede entrar al sistema y con qué rol</p>
+  </div>
+  <div class="encabezado-acciones">
+    <a href="{% url 'dashboard:usuario_create' %}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Nuevo usuario</a>
+  </div>
+</div>
+
+{% include 'dashboard/_filtros.html' %}
+
+{% if usuarios %}
+  <div class="table-responsive tabla-contenedor">
+    <table class="table table-hover align-middle">
+      <thead>
+        <tr>
+          {% th_orden 'Usuario' 'usuario' %}
+          {% th_orden 'Nombre' 'nombre' %}
+          {% th_orden 'Correo' 'correo' %}
+          <th>Rol</th>
+          {% th_orden 'Ventas' 'ventas' 'text-end' %}
+          {% th_orden 'Último acceso' 'acceso' %}
+          {% th_orden 'Estado' 'activo' %}
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in usuarios %}
+          {% with r=u|rol %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="avatar">{{ u.username|first|upper }}</span>
+                <span class="fw-medium">{{ u.username }}</span>
+                {% if u.pk == request.user.pk %}<span class="celda-secundaria ms-1">(tú)</span>{% endif %}
+              </div>
+            </td>
+            <td>{{ u.get_full_name|default:"—" }}</td>
+            <td>{{ u.email|default:"—" }}</td>
+            <td><span class="badge-estado {% if r == 'Administrador' or r == 'Superusuario' %}badge-estado-aviso{% elif r == 'Cajero' %}badge-estado-si{% else %}badge-estado-no{% endif %}">{{ r }}</span></td>
+            <td class="col-num">{{ u.num_ventas }}</td>
+            <td class="text-nowrap">{% if u.last_login %}{{ u.last_login|date:"d/m/Y" }}<span class="celda-secundaria">{{ u.last_login|date:"H:i" }}</span>{% else %}<span class="text-muted">Nunca</span>{% endif %}</td>
+            <td>{% if u.is_active %}<span class="badge-estado badge-estado-si">Activo</span>{% else %}<span class="badge-estado badge-estado-no">Inactivo</span>{% endif %}</td>
+            <td class="text-end text-nowrap">
+              {% if u.is_superuser %}
+                <span class="celda-secundaria">Se administra en /admin/</span>
+              {% else %}
+                <a href="{% url 'dashboard:usuario_update' u.pk %}" class="btn btn-sm btn-outline-primary" title="Editar" aria-label="Editar {{ u.username }}"><i class="bi bi-pencil-square"></i></a>
+                <a href="{% url 'dashboard:usuario_contrasena' u.pk %}" class="btn btn-sm btn-outline-primary" title="Cambiar contraseña" aria-label="Cambiar contraseña de {{ u.username }}"><i class="bi bi-key"></i></a>
+                {% if u.pk != request.user.pk %}
+                  <form method="post" action="{% url 'dashboard:usuario_estado' u.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    {% if u.is_active %}
+                      <button type="submit" class="btn btn-sm btn-outline-danger" title="Desactivar" aria-label="Desactivar {{ u.username }}"><i class="bi bi-person-slash"></i></button>
+                    {% else %}
+                      <button type="submit" class="btn btn-sm btn-outline-primary" title="Activar" aria-label="Activar {{ u.username }}"><i class="bi bi-person-check"></i></button>
+                    {% endif %}
+                  </form>
+                {% endif %}
+              {% endif %}
+            </td>
+          </tr>
+          {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% include 'dashboard/_pagination.html' %}
+{% else %}
+  {% include 'partials/_estado_vacio.html' with icono="bi-search" titulo="Sin resultados" texto="Ningún usuario coincide con los filtros." %}
+{% endif %}
+{% endblock %}

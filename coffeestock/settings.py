@@ -203,7 +203,8 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# Español con punto decimal y coma de miles (como se usa en El Salvador).
+LANGUAGE_CODE = 'es-mx'
 
 # Zona horaria en la que se muestran las fechas y se agrupan los reportes.
 # La base de datos siempre guarda en UTC; Django convierte al mostrar.

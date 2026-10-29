@@ -19,6 +19,12 @@
       >
         <i class="bi bi-clipboard2-plus me-1"></i>Registrar merma
       </a>
+      <a
+        href="{% url 'dashboard:corte_caja' %}"
+        class="btn btn-sm btn-outline-light"
+      >
+        <i class="bi bi-cash-stack me-1"></i>Mi corte
+      </a>
       {% if is_administrador %}
       <a
         href="{% url 'dashboard:index' %}"

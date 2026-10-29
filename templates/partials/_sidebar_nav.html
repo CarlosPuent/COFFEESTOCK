@@ -20,6 +20,11 @@
         <i class="bi bi-receipt"></i> Ventas
       </a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if nombre == 'corte_caja' %}active{% endif %}" href="{% url 'dashboard:corte_caja' %}">
+        <i class="bi bi-cash-stack"></i> Corte de caja
+      </a>
+    </li>
 
     <li class="sidebar-seccion">Inventario</li>
     <li class="nav-item">
@@ -52,6 +57,13 @@
     <li class="nav-item">
       <span class="nav-link sidebar-link disabled"><i class="bi bi-bar-chart-line"></i> Reportes (próximamente)</span>
     </li>
+
+    <li class="sidebar-seccion">Administración</li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if 'usuario' in nombre %}active{% endif %}" href="{% url 'dashboard:usuario_list' %}">
+        <i class="bi bi-people"></i> Usuarios
+      </a>
+    </li>
   {% else %}
     <li class="sidebar-seccion">Turno</li>
     <li class="nav-item">
@@ -62,6 +74,11 @@
     <li class="nav-item">
       <a class="nav-link sidebar-link {% if nombre == 'merma_create' %}active{% endif %}" href="{% url 'dashboard:merma_create' %}">
         <i class="bi bi-clipboard2-plus"></i> Registrar merma
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link sidebar-link {% if nombre == 'corte_caja' %}active{% endif %}" href="{% url 'dashboard:corte_caja' %}">
+        <i class="bi bi-cash-stack"></i> Mi corte de caja
       </a>
     </li>
   {% endif %}

@@ -26,3 +26,15 @@ def th_orden(context, etiqueta, clave, clase=''):
         '<i class="bi {} th-orden-icono" aria-hidden="true"></i></a></th>',
         clase, aria, activo, href, etiqueta, icono,
     )
+
+
+@register.filter
+def rol(usuario):
+    """Rol del usuario para mostrar: Superusuario, Administrador, Cajero o Sin rol."""
+    if usuario.is_superuser:
+        return 'Superusuario'
+    nombres = {g.name for g in usuario.groups.all()}
+    for nombre in ('Administrador', 'Cajero'):
+        if nombre in nombres:
+            return nombre
+    return 'Sin rol'

@@ -88,3 +88,66 @@ class ListadosTests(TestCase):
     def test_resumen_de_mermas(self):
         respuesta = self.client.get(reverse('dashboard:merma_list'))
         self.assertEqual(round(respuesta.context['costo_total'], 2), Decimal('0.18'))
+
+
+class UsuariosYCorteTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.grupo_admin = Group.objects.create(name='Administrador')
+        cls.grupo_cajero = Group.objects.create(name='Cajero')
+        cls.admin = User.objects.create_user('jefa', password='x')
+        cls.admin.groups.add(cls.grupo_admin)
+        cls.cajero = User.objects.create_user('caja1', password='x')
+        cls.cajero.groups.add(cls.grupo_cajero)
+        cls.otro = User.objects.create_user('caja2', password='x')
+        cls.otro.groups.add(cls.grupo_cajero)
+        Venta.objects.create(usuario_cajero=cls.cajero, total=Decimal('7.75'),
+                             metodo_pago='efectivo', monto_recibido=Decimal('10'))
+        Venta.objects.create(usuario_cajero=cls.otro, total=Decimal('3.00'), metodo_pago='tarjeta')
+        Venta.objects.create(usuario_cajero=cls.cajero, total=Decimal('5.00'), estado='anulada')
+
+    def test_crear_usuario_con_rol(self):
+        self.client.force_login(self.admin)
+        respuesta = self.client.post(reverse('dashboard:usuario_create'), {
+            'username': 'nuevo', 'first_name': 'Ana', 'last_name': 'Pérez', 'email': 'ana@ejemplo.com',
+            'rol': 'Cajero', 'password1': 'CafeSeguro#2026', 'password2': 'CafeSeguro#2026', 'is_active': 'on',
+        })
+        self.assertEqual(respuesta.status_code, 302)
+        nuevo = User.objects.get(username='nuevo')
+        self.assertTrue(nuevo.check_password('CafeSeguro#2026'))
+        self.assertEqual(list(nuevo.groups.values_list('name', flat=True)), ['Cajero'])
+
+    def test_cambiar_rol_quita_el_anterior(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse('dashboard:usuario_update', args=[self.cajero.pk]), {
+            'username': 'caja1', 'rol': 'Administrador', 'is_active': 'on',
+        })
+        self.assertEqual(list(self.cajero.groups.values_list('name', flat=True)), ['Administrador'])
+
+    def test_no_puede_desactivarse_a_si_mismo(self):
+        self.client.force_login(self.admin)
+        self.client.post(reverse('dashboard:usuario_estado', args=[self.admin.pk]))
+        self.admin.refresh_from_db()
+        self.assertTrue(self.admin.is_active)
+        self.client.post(reverse('dashboard:usuario_estado', args=[self.otro.pk]))
+        self.otro.refresh_from_db()
+        self.assertFalse(self.otro.is_active)
+
+    def test_cajero_no_entra_a_usuarios(self):
+        self.client.force_login(self.cajero)
+        self.assertEqual(self.client.get(reverse('dashboard:usuario_list')).status_code, 403)
+
+    def test_corte_de_caja_admin(self):
+        self.client.force_login(self.admin)
+        corte = self.client.get(reverse('dashboard:corte_caja')).context['corte']
+        self.assertEqual(corte['num_ventas'], 2)
+        self.assertEqual(corte['total'], Decimal('10.75'))
+        self.assertEqual(corte['efectivo']['cambio'], Decimal('2.25'))
+        self.assertEqual(corte['tarjeta']['total'], Decimal('3.00'))
+        self.assertEqual(corte['anuladas']['num'], 1)
+
+    def test_cajero_solo_ve_su_corte(self):
+        self.client.force_login(self.cajero)
+        corte = self.client.get(reverse('dashboard:corte_caja'), {'cajero': self.otro.pk}).context['corte']
+        self.assertEqual(corte['cajero'], self.cajero)
+        self.assertEqual(corte['total'], Decimal('7.75'))

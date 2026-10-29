@@ -1,0 +1,137 @@
+{% extends 'dashboard/dashboard_base.html' %}
+{% load formato %}
+
+{% block title %}Corte de caja - CoffeeStock{% endblock %}
+
+{% block dashboard_content %}
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-cash-stack me-2"></i>Corte de caja</h1>
+    <p class="encabezado-resumen">
+      {{ corte.fecha_desde|date:"l d \d\e F \d\e Y"|capfirst }}
+      <span class="separador">·</span>
+      {% if corte.cajero %}Cajero <strong>{{ corte.cajero.username }}</strong>{% else %}Todos los cajeros{% endif %}
+    </p>
+  </div>
+  <div class="encabezado-acciones">
+    {% block acciones_extra %}{% endblock %}
+  </div>
+</div>
+
+{% include 'dashboard/_filtros.html' %}
+
+<div class="kpi-grid mb-4">
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-receipt"></i>Ventas</div>
+    <div class="kpi-valor">{{ corte.num_ventas }}</div>
+    <div class="kpi-detalle">Ticket promedio {{ corte.ticket_promedio|moneda }}</div>
+  </div>
+  <div class="kpi kpi-destacado">
+    <div class="kpi-etiqueta"><i class="bi bi-cash-stack"></i>Total vendido</div>
+    <div class="kpi-valor">{{ corte.total|moneda }}</div>
+    <div class="kpi-detalle">Sin contar anulaciones</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-cash-coin"></i>Efectivo</div>
+    <div class="kpi-valor">{{ corte.efectivo.total|moneda }}</div>
+    <div class="kpi-detalle">{{ corte.efectivo.num }} venta{{ corte.efectivo.num|pluralize }} · recibido {{ corte.efectivo.recibido|moneda }} · cambio {{ corte.efectivo.cambio|moneda }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-credit-card"></i>Tarjeta</div>
+    <div class="kpi-valor">{{ corte.tarjeta.total|moneda }}</div>
+    <div class="kpi-detalle">{{ corte.tarjeta.num }} venta{{ corte.tarjeta.num|pluralize }}</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-x-octagon"></i>Anuladas</div>
+    <div class="kpi-valor {% if corte.anuladas.num %}texto-negativo{% endif %}">{{ corte.anuladas.num }}</div>
+    <div class="kpi-detalle">{{ corte.anuladas.total|moneda }} no suman al total</div>
+  </div>
+</div>
+
+<div class="caja-efectivo mb-4">
+  <i class="bi bi-safe2"></i>
+  <div>
+    <strong>Efectivo que debe haber en caja: {{ corte.efectivo.total|moneda }}</strong>
+    <div class="text-muted small">Además del fondo inicial. Es lo cobrado en efectivo: lo recibido de los clientes menos el cambio entregado.</div>
+  </div>
+</div>
+
+{% if corte.num_ventas %}
+<div class="row g-4">
+  {% if es_admin and not corte.cajero %}
+  <div class="col-xl-6">
+    <h2 class="titulo-bloque">Por cajero</h2>
+    <div class="table-responsive tabla-contenedor">
+      <table class="table align-middle">
+        <thead><tr><th>Cajero</th><th class="text-end">Ventas</th><th class="text-end">Efectivo</th><th class="text-end">Tarjeta</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+          {% for fila in corte.por_cajero %}
+            <tr>
+              <td class="fw-medium">{{ fila.usuario_cajero__username }}</td>
+              <td class="col-num">{{ fila.num }}</td>
+              <td class="col-num">{{ fila.monto_efectivo|moneda }}</td>
+              <td class="col-num">{{ fila.monto_tarjeta|moneda }}</td>
+              <td class="col-num fw-medium">{{ fila.monto|moneda }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="col-xl-6">
+    <h2 class="titulo-bloque">Productos vendidos</h2>
+    <div class="table-responsive tabla-contenedor">
+      <table class="table align-middle">
+        <thead><tr><th>Producto</th><th class="text-end">Unidades</th><th class="text-end">Importe</th></tr></thead>
+        <tbody>
+          {% for fila in corte.productos %}
+            <tr>
+              <td class="fw-medium">{{ fila.producto__nombre }}</td>
+              <td class="col-num">{{ fila.unidades|cantidad }}</td>
+              <td class="col-num">{{ fila.importe|moneda }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="col-xl-6">
+    <h2 class="titulo-bloque">Ventas por hora</h2>
+    <div class="tabla-contenedor p-3">
+      {% for fila in corte.por_hora %}
+        <div class="barra-hora">
+          <span class="barra-hora-etiqueta">{{ fila.hora|stringformat:"02d" }}:00</span>
+          <div class="barra-hora-pista"><div class="barra-hora-relleno" style="width: {% widthratio fila.monto corte.total 100 %}%"></div></div>
+          <span class="barra-hora-valor">{{ fila.monto|moneda }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-xl-6">
+    <h2 class="titulo-bloque">Detalle de ventas</h2>
+    <div class="table-responsive tabla-contenedor tabla-scroll">
+      <table class="table table-sm align-middle">
+        <thead><tr><th>Folio</th><th>Hora</th>{% if es_admin %}<th>Cajero</th>{% endif %}<th>Pago</th><th class="text-end">Total</th></tr></thead>
+        <tbody>
+          {% for venta in corte.ventas %}
+            <tr>
+              <td class="col-codigo">{% if es_admin %}<a href="{% url 'dashboard:venta_detail' venta.pk %}">{{ venta.codigo }}</a>{% else %}{{ venta.codigo }}{% endif %}</td>
+              <td>{{ venta.fecha|date:"H:i" }}</td>
+              {% if es_admin %}<td>{{ venta.usuario_cajero.username }}</td>{% endif %}
+              <td>{{ venta.get_metodo_pago_display }}</td>
+              <td class="col-num">{{ venta.total|moneda }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% else %}
+  {% include 'partials/_estado_vacio.html' with icono="bi-cash-stack" titulo="Sin ventas en esta fecha" texto="Elige otra fecha o, si es hoy, registra ventas desde el punto de venta." %}
+{% endif %}
+{% endblock %}

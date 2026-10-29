@@ -1759,3 +1759,115 @@ form .tarjeta-ancha ~ .formulario-acciones {
 .fila-anulada .monto-venta {
   text-decoration: line-through;
 }
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: rgba(169, 121, 63, 0.16);
+  color: var(--coffee-accent-hover);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+/* ---------- Indicadores (KPI) ---------- */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+}
+.kpi {
+  background-color: var(--coffee-card);
+  border: 1px solid var(--coffee-border);
+  border-radius: var(--coffee-radius);
+  padding: 1rem 1.15rem;
+}
+.kpi-etiqueta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--coffee-text-muted);
+}
+.kpi-etiqueta i {
+  color: var(--coffee-accent);
+  font-size: 0.95rem;
+}
+.kpi-valor {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-top: 0.35rem;
+  font-variant-numeric: tabular-nums;
+}
+.kpi-detalle {
+  font-size: var(--fs-small);
+  color: var(--coffee-text-muted);
+  margin-top: 0.15rem;
+}
+.kpi-destacado {
+  background-color: var(--coffee-ink);
+  border-color: var(--coffee-ink);
+  color: #fff;
+}
+.kpi-destacado .kpi-etiqueta,
+.kpi-destacado .kpi-detalle {
+  color: rgba(255, 255, 255, 0.65);
+}
+.kpi-destacado .kpi-valor {
+  color: #fff;
+}
+
+.caja-efectivo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--coffee-radius);
+  background-color: rgba(92, 124, 90, 0.12);
+  border: 1px solid rgba(92, 124, 90, 0.25);
+}
+.caja-efectivo > i {
+  font-size: 1.75rem;
+  color: var(--coffee-success);
+}
+
+.barra-hora {
+  display: grid;
+  grid-template-columns: 3.2rem 1fr 5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.3rem 0;
+  font-size: var(--fs-small);
+}
+.barra-hora-etiqueta {
+  color: var(--coffee-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.barra-hora-pista {
+  background-color: var(--coffee-bg);
+  border-radius: 999px;
+  height: 0.6rem;
+  overflow: hidden;
+}
+.barra-hora-relleno {
+  background-color: var(--coffee-accent);
+  height: 100%;
+  border-radius: 999px;
+}
+.barra-hora-valor {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tabla-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+}
