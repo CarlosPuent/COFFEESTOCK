@@ -20,8 +20,19 @@
     });
   }
 
+  /* --- Registros por página: recarga la tabla desde la primera página --- */
+  function iniciarTamanoPagina() {
+    document.querySelectorAll("select[data-por-pagina]").forEach(function (select) {
+      select.addEventListener("change", function () {
+        var base = select.dataset.base;
+        window.location.search = (base ? base + "&" : "") + "por_pagina=" + select.value;
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     iniciarFechas(document);
+    iniciarTamanoPagina();
   });
 
   window.CoffeeStock = { iniciarFechas: iniciarFechas };

@@ -1,11 +1,11 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
 {% load formato %}
-{% block title %}Venta #{{ venta.id }} - CoffeeStock{% endblock %}
+{% block title %}Venta {{ venta.codigo }} - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <h1 class="mb-0"><i class="bi bi-receipt me-2"></i>Venta #{{ venta.id }}</h1>
+  <h1 class="mb-0"><i class="bi bi-receipt me-2"></i>Venta <span class="col-codigo fs-5">{{ venta.codigo }}</span></h1>
   <a href="{% url 'dashboard:venta_list' %}" class="btn btn-outline-secondary">
     <i class="bi bi-arrow-left me-1"></i>Volver al listado
   </a>
@@ -36,19 +36,21 @@
     <thead>
       <tr>
         <th>Producto</th>
-        <th>Cantidad</th>
-        <th>Subtotal</th>
+        <th class="text-end">Precio unitario</th>
+        <th class="text-end">Cantidad</th>
+        <th class="text-end">Subtotal</th>
       </tr>
     </thead>
     <tbody>
       {% for detalle in venta.detalles.all %}
         <tr>
-          <td>{{ detalle.producto.nombre }}</td>
-          <td>{{ detalle.cantidad|cantidad }}</td>
-          <td>{{ detalle.subtotal|moneda }}</td>
+          <td class="fw-medium">{{ detalle.producto.nombre }}<span class="celda-secundaria col-codigo">{{ detalle.producto.codigo }}</span></td>
+          <td class="col-num">{{ detalle.precio_unitario|moneda }}</td>
+          <td class="col-num">{{ detalle.cantidad|cantidad }}</td>
+          <td class="col-num">{{ detalle.subtotal|moneda }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="3" class="text-center text-muted">Esta venta no tiene detalles.</td></tr>
+        <tr><td colspan="4" class="text-center text-muted">Esta venta no tiene detalles.</td></tr>
       {% endfor %}
     </tbody>
   </table>

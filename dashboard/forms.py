@@ -4,6 +4,8 @@ from django.forms import inlineformset_factory
 
 from core.models import Insumo, Merma, Producto, RecetaInsumo
 
+from .listados import FiltroForm
+
 User = get_user_model()
 
 
@@ -70,40 +72,83 @@ class MermaForm(forms.ModelForm):
         anteponer_opcion_vacia(self.fields['causa'], 'Selecciona una causa')
 
 
-class MermaFilterForm(forms.Form):
-    insumo = forms.ModelChoiceField(
-        queryset=Insumo.objects.all(),
+ESTADO_CHOICES = [('', 'Todos'), ('activos', 'Activos'), ('inactivos', 'Inactivos')]
+
+
+def campo_monto(label, placeholder):
+    return forms.DecimalField(
         required=False,
-        label='Insumo',
+        label=label,
+        min_value=0,
+        decimal_places=2,
+        widget=forms.NumberInput(attrs={'placeholder': placeholder, 'step': '0.01'}),
+    )
+
+
+class InsumoFilterForm(FiltroForm):
+    q = forms.CharField(
+        required=False, label='Buscar',
+        widget=forms.TextInput(attrs={'placeholder': 'Nombre o código (INS-0001)'}),
+    )
+    unidad = forms.ChoiceField(
+        required=False, label='Unidad',
+        choices=[('', 'Todas')] + list(Insumo.UnidadMedida.choices),
+    )
+    stock = forms.ChoiceField(
+        required=False, label='Stock',
+        choices=[('', 'Todos'), ('bajo', 'En alerta (bajo el mínimo)'), ('normal', 'Normal')],
+    )
+    estado = forms.ChoiceField(required=False, label='Estado', choices=ESTADO_CHOICES)
+
+
+class ProductoFilterForm(FiltroForm):
+    q = forms.CharField(
+        required=False, label='Buscar',
+        widget=forms.TextInput(attrs={'placeholder': 'Nombre o código (PRD-0001)'}),
+    )
+    categoria = forms.ChoiceField(
+        required=False, label='Categoría',
+        choices=[('', 'Todas')] + list(Producto.Categoria.choices),
+    )
+    estado = forms.ChoiceField(required=False, label='Estado', choices=ESTADO_CHOICES)
+    precio_min = campo_monto('Precio desde', '$ mín.')
+    precio_max = campo_monto('Precio hasta', '$ máx.')
+
+
+class MermaFilterForm(FiltroForm):
+    insumo = forms.ModelChoiceField(
+        queryset=Insumo.objects.all(), required=False, label='Insumo',
         empty_label='Todos los insumos',
     )
     causa = forms.ChoiceField(
         choices=[('', 'Todas las causas')] + list(Merma.Causa.choices),
-        required=False,
-        label='Causa',
+        required=False, label='Causa',
+    )
+    responsable = forms.ModelChoiceField(
+        queryset=User.objects.filter(mermas__isnull=False).distinct().order_by('username'),
+        required=False, label='Responsable', empty_label='Todos',
     )
     fecha_desde = campo_fecha('Desde')
     fecha_hasta = campo_fecha('Hasta')
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['insumo'].widget.attrs['class'] = 'form-select form-select-sm'
-        self.fields['causa'].widget.attrs['class'] = 'form-select form-select-sm'
 
-
-class VentaFilterForm(forms.Form):
+class VentaFilterForm(FiltroForm):
+    q = forms.CharField(
+        required=False, label='Folio',
+        widget=forms.TextInput(attrs={'placeholder': 'V-000123'}),
+    )
     usuario_cajero = forms.ModelChoiceField(
-        queryset=User.objects.filter(groups__name='Cajero').order_by('username'),
-        required=False,
-        label='Cajero',
-        empty_label='Todos los cajeros',
+        queryset=User.objects.filter(ventas__isnull=False).distinct().order_by('username'),
+        required=False, label='Cajero', empty_label='Todos los cajeros',
+    )
+    producto = forms.ModelChoiceField(
+        queryset=Producto.objects.all(), required=False, label='Producto',
+        empty_label='Todos',
     )
     fecha_desde = campo_fecha('Desde')
     fecha_hasta = campo_fecha('Hasta')
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['usuario_cajero'].widget.attrs['class'] = 'form-select form-select-sm'
+    total_min = campo_monto('Total desde', '$ mín.')
+    total_max = campo_monto('Total hasta', '$ máx.')
 
 
 RECETA_INSUMO_FORMSET_PREFIX = 'receta_insumos'

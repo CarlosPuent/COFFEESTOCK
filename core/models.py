@@ -1,6 +1,13 @@
+from decimal import Decimal
+
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models, transaction
+
+
+def codigo(prefijo, pk, digitos=4):
+    """Código legible para mostrar en pantallas y reportes: INS-0007."""
+    return f'{prefijo}-{pk:0{digitos}d}' if pk else f'{prefijo}-nuevo'
 
 
 class Insumo(models.Model):
@@ -17,8 +24,9 @@ class Insumo(models.Model):
     stock_minimo = models.DecimalField(
         max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
     )
+    # 4 decimales: el costo por gramo o mililitro suele ser de milésimas.
     costo_unitario = models.DecimalField(
-        max_digits=12, decimal_places=2, validators=[MinValueValidator(0)]
+        max_digits=14, decimal_places=4, validators=[MinValueValidator(0)]
     )
     activo = models.BooleanField(default=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -32,8 +40,18 @@ class Insumo(models.Model):
             models.Index(fields=['alerta_pendiente'], name='idx_insumo_alerta_pendiente'),
         ]
 
+    PREFIJO = 'INS'
+
     def __str__(self):
         return f'{self.nombre} ({self.get_unidad_medida_display()})'
+
+    @property
+    def codigo(self):
+        return codigo(self.PREFIJO, self.pk)
+
+    @property
+    def valor_inventario(self):
+        return (self.stock_actual or 0) * (self.costo_unitario or 0)
 
     @transaction.atomic
     def descontar_stock(self, cantidad):
@@ -94,8 +112,29 @@ class Producto(models.Model):
             models.Index(fields=['nombre'], name='idx_producto_nombre'),
         ]
 
+    PREFIJO = 'PRD'
+
     def __str__(self):
         return self.nombre
+
+    @property
+    def codigo(self):
+        return codigo(self.PREFIJO, self.pk)
+
+    @property
+    def costo_receta(self):
+        """Costo de los insumos que lleva una unidad del producto."""
+        return sum(
+            (r.cantidad_requerida * r.insumo.costo_unitario for r in self.receta_insumos.all()),
+            Decimal('0'),
+        )
+
+    @property
+    def margen(self):
+        """Margen de ganancia sobre el precio de venta, en porcentaje."""
+        if not self.precio_venta:
+            return None
+        return (self.precio_venta - self.costo_receta) / self.precio_venta * 100
 
 
 class RecetaInsumo(models.Model):
@@ -147,8 +186,19 @@ class Merma(models.Model):
             models.Index(fields=['fecha', 'causa'], name='idx_merma_fecha_causa'),
         ]
 
+    PREFIJO = 'MER'
+
     def __str__(self):
         return f'Merma de {self.cantidad} {self.insumo.unidad_medida} - {self.insumo}'
+
+    @property
+    def codigo(self):
+        return codigo(self.PREFIJO, self.pk)
+
+    @property
+    def costo(self):
+        """Valor perdido, al costo unitario actual del insumo."""
+        return self.cantidad * self.insumo.costo_unitario
 
 
 class Venta(models.Model):
@@ -166,8 +216,14 @@ class Venta(models.Model):
             models.Index(fields=['fecha'], name='idx_venta_fecha'),
         ]
 
+    PREFIJO = 'V'
+
     def __str__(self):
-        return f'Venta #{self.pk} - {self.fecha:%Y-%m-%d %H:%M}'
+        return f'Venta {self.codigo} - {self.fecha:%Y-%m-%d %H:%M}'
+
+    @property
+    def codigo(self):
+        return codigo(self.PREFIJO, self.pk, digitos=6)
 
 
 class DetalleVenta(models.Model):
@@ -189,3 +245,7 @@ class DetalleVenta(models.Model):
 
     def __str__(self):
         return f'{self.producto} x{self.cantidad} (Venta #{self.venta_id})'
+
+    @property
+    def precio_unitario(self):
+        return self.subtotal / self.cantidad if self.cantidad else self.subtotal

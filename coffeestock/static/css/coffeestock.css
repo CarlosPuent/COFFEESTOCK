@@ -1358,3 +1358,218 @@ span.flatpickr-weekday {
 .flatpickr-day.nextMonthDay {
   color: rgba(36, 27, 21, 0.3);
 }
+
+/* ---------- Listados: filtros, orden y pie de tabla ---------- */
+
+.filtros {
+  background-color: var(--coffee-card);
+  border: 1px solid var(--coffee-border);
+  border-radius: var(--coffee-radius);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+.filtros-campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem 1rem;
+}
+.filtro {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+}
+.filtro-ancho {
+  min-width: 220px;
+  flex: 1 1 220px;
+  max-width: 320px;
+}
+.filtro .form-label {
+  font-size: 0.72rem;
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--coffee-text-muted);
+  margin-bottom: 0.25rem;
+}
+.filtro .form-control-sm,
+.filtro .form-select-sm {
+  min-height: 34px;
+}
+.filtros-acciones {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+.filtros-acciones .btn {
+  min-height: 34px;
+}
+
+.th-orden {
+  color: inherit;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.th-orden:hover {
+  color: var(--coffee-text);
+}
+.th-orden-icono {
+  font-size: 0.8rem;
+  opacity: 0.35;
+}
+.th-orden-activo {
+  color: var(--coffee-text);
+}
+.th-orden-activo .th-orden-icono {
+  opacity: 1;
+  color: var(--coffee-accent);
+}
+th.text-end .th-orden {
+  justify-content: flex-end;
+}
+
+.tabla-pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  color: var(--coffee-text-muted);
+  font-size: var(--fs-small);
+}
+.tabla-pie strong {
+  color: var(--coffee-text);
+  font-weight: var(--fw-label);
+}
+.tabla-pie-separador {
+  margin: 0 0.4rem;
+}
+.tabla-pie-tamano {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+.tabla-pie-tamano .form-select-sm {
+  width: auto;
+  min-height: 30px;
+  padding-top: 0.15rem;
+  padding-bottom: 0.15rem;
+}
+.pagination .page-item.active .page-link {
+  background-color: var(--coffee-accent);
+  border-color: var(--coffee-accent);
+  color: #fff;
+}
+.pagination .page-item.disabled .page-link {
+  color: rgba(36, 27, 21, 0.3);
+  background-color: transparent;
+}
+.pagination .page-link {
+  min-width: 2rem;
+  text-align: center;
+}
+
+/* Celdas numéricas y código */
+.col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.col-codigo {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  font-size: 0.82rem;
+  color: var(--coffee-text-muted);
+  white-space: nowrap;
+}
+.celda-secundaria {
+  display: block;
+  font-size: var(--fs-small);
+  color: var(--coffee-text-muted);
+}
+.miniatura {
+  width: 40px;
+  height: 40px;
+  border-radius: 0.5rem;
+  object-fit: cover;
+  background-color: var(--coffee-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--coffee-text-muted);
+  flex-shrink: 0;
+}
+.badge-estado-alerta {
+  background-color: rgba(181, 75, 58, 0.14);
+  color: var(--coffee-danger);
+}
+.badge-estado-aviso {
+  background-color: rgba(169, 121, 63, 0.16);
+  color: var(--coffee-accent-hover);
+}
+.texto-positivo {
+  color: var(--coffee-success);
+}
+.texto-negativo {
+  color: var(--coffee-danger);
+}
+
+/* ---------- Encabezado de página ---------- */
+
+.encabezado-pagina {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.encabezado-resumen {
+  margin: 0;
+  color: var(--coffee-text-muted);
+  font-size: var(--fs-small);
+}
+.encabezado-resumen strong {
+  color: var(--coffee-text);
+  font-weight: 600;
+}
+.encabezado-resumen .separador {
+  margin: 0 0.45rem;
+  opacity: 0.6;
+}
+.encabezado-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.tabla-contenedor {
+  border: 1px solid var(--coffee-border);
+  border-radius: var(--coffee-radius);
+  background-color: var(--coffee-card);
+}
+.tabla-contenedor .table {
+  border-radius: 0;
+}
+.celda-observacion {
+  max-width: 260px;
+  color: var(--coffee-text-muted);
+  font-size: var(--fs-small);
+}
+.fw-medium {
+  font-weight: 500;
+}
+
+/* El área principal no debe crecer más que la ventana: las tablas anchas
+   se desplazan dentro de su contenedor en vez de empujar la página. */
+.dashboard-main {
+  min-width: 0;
+}
+.badge-estado {
+  white-space: nowrap;
+}
+.col-nombre {
+  min-width: 190px;
+}

@@ -56,3 +56,17 @@ def porcentaje(valor):
     if numero is None:
         return '—'
     return f'{numero:,.1f} %'
+
+
+@register.filter
+def costo(valor):
+    """Costos unitarios: mínimo 2 decimales y hasta 4 si hacen falta.
+    0.08 -> "$0.08"; 0.008 -> "$0.008"; 12.5 -> "$12.50"."""
+    numero = _a_decimal(valor)
+    if numero is None:
+        return '—'
+    texto = f'{abs(numero):,.4f}'
+    entero, decimales = texto.split('.')
+    decimales = decimales.rstrip('0').ljust(2, '0')
+    signo = '-' if numero < 0 else ''
+    return f'{signo}${entero}.{decimales}'

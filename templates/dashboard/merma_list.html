@@ -1,59 +1,54 @@
 {% extends 'dashboard/dashboard_base.html' %}
+{% load formato listados %}
 
-{% load formato %}
 {% block title %}Mermas - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-  <h1 class="mb-0"><i class="bi bi-exclamation-triangle me-2"></i>Mermas</h1>
-  <a href="{% url 'dashboard:merma_create' %}" class="btn btn-primary"><i class="bi bi-clipboard2-plus me-1"></i>Registrar merma</a>
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-exclamation-triangle me-2"></i>Mermas</h1>
+    <p class="encabezado-resumen">
+      {{ total_resultados }} merma{{ total_resultados|pluralize }}
+      <span class="separador">·</span>
+      Costo perdido <strong class="texto-negativo">{{ costo_total|moneda }}</strong>
+    </p>
+  </div>
+  <div class="encabezado-acciones">
+    {% block acciones_extra %}{% endblock %}
+    <a href="{% url 'dashboard:merma_create' %}" class="btn btn-primary"><i class="bi bi-clipboard2-plus me-1"></i>Registrar merma</a>
+  </div>
 </div>
 
-<form method="get" class="row g-2 mb-3 align-items-end">
-  <div class="col-auto">
-    <label class="form-label mb-0 small">Insumo</label>
-    {{ filter_form.insumo }}
-  </div>
-  <div class="col-auto">
-    <label class="form-label mb-0 small">Causa</label>
-    {{ filter_form.causa }}
-  </div>
-  <div class="col-auto">
-    <label class="form-label mb-0 small">Desde</label>
-    {{ filter_form.fecha_desde }}
-  </div>
-  <div class="col-auto">
-    <label class="form-label mb-0 small">Hasta</label>
-    {{ filter_form.fecha_hasta }}
-  </div>
-  <div class="col-auto">
-    <button type="submit" class="btn btn-outline-secondary"><i class="bi bi-funnel me-1"></i>Filtrar</button>
-    <a href="{% url 'dashboard:merma_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Limpiar</a>
-  </div>
-</form>
+{% include 'dashboard/_filtros.html' %}
 
 {% if mermas %}
-  <div class="table-responsive">
-    <table class="table table-bordered table-hover align-middle">
+  <div class="table-responsive tabla-contenedor">
+    <table class="table table-hover align-middle">
       <thead>
         <tr>
-          <th>Insumo</th>
-          <th>Cantidad</th>
-          <th>Causa</th>
-          <th>Responsable</th>
-          <th>Fecha</th>
+          {% th_orden 'Código' 'codigo' %}
+          {% th_orden 'Fecha' 'fecha' %}
+          {% th_orden 'Insumo' 'insumo' %}
+          {% th_orden 'Cantidad' 'cantidad' 'text-end' %}
+          {% th_orden 'Causa' 'causa' %}
+          {% th_orden 'Costo' 'costo' 'text-end' %}
+          {% th_orden 'Responsable' 'responsable' %}
           <th>Observación</th>
         </tr>
       </thead>
       <tbody>
         {% for merma in mermas %}
           <tr>
-            <td>{{ merma.insumo.nombre }}</td>
-            <td>{{ merma.cantidad|cantidad }} {{ merma.insumo.unidad_medida|unidad_corta }}</td>
-            <td>{{ merma.get_causa_display }}</td>
+            <td class="col-codigo">{{ merma.codigo }}</td>
+            <td class="text-nowrap">{{ merma.fecha|date:"d/m/Y" }}<span class="celda-secundaria">{{ merma.fecha|date:"H:i" }}</span></td>
+            <td class="fw-medium">{{ merma.insumo.nombre }}</td>
+            <td class="col-num">{{ merma.cantidad|cantidad }} {{ merma.insumo.unidad_medida|unidad_corta }}</td>
+            <td>
+              <span class="badge-estado {% if merma.causa == 'caducidad' %}badge-estado-alerta{% elif merma.causa == 'mala_preparacion' %}badge-estado-aviso{% else %}badge-estado-no{% endif %}">{{ merma.get_causa_display }}</span>
+            </td>
+            <td class="col-num">{{ merma.costo_merma|moneda }}</td>
             <td>{{ merma.usuario_responsable.get_username }}</td>
-            <td>{{ merma.fecha|date:"d/m/Y H:i" }}</td>
-            <td>{{ merma.observacion|default:"—" }}</td>
+            <td class="celda-observacion">{{ merma.observacion|default:"—" }}</td>
           </tr>
         {% endfor %}
       </tbody>
@@ -62,7 +57,7 @@
 
   {% include 'dashboard/_pagination.html' %}
 {% else %}
-  {% if querystring %}
+  {% if hay_filtros %}
     {% include 'partials/_estado_vacio.html' with icono="bi-funnel" titulo="Sin resultados" texto="Ninguna merma coincide con los filtros aplicados. Ajusta el rango de fechas, el insumo o la causa." %}
   {% else %}
     {% url 'dashboard:merma_create' as crear_url %}

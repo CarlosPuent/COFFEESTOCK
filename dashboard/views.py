@@ -4,8 +4,11 @@ import json
 from django.contrib import messages
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
-from django.db.models import Count, ProtectedError, Sum
-from django.db.models.functions import TruncDate
+from django.db.models import (
+    Case, Count, DecimalField, Exists, ExpressionWrapper, F, OuterRef, ProtectedError,
+    Sum, Value, When,
+)
+from django.db.models.functions import Coalesce, TruncDate
 from django.shortcuts import redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -15,17 +18,46 @@ from django.views.generic import (
 
 from core.mixins import GroupRequiredMixin
 from core.services.alertas import estado_configuracion
-from core.models import DetalleVenta, Insumo, Merma, Producto, Venta
+from core.models import DetalleVenta, Insumo, Merma, Producto, RecetaInsumo, Venta
 
 from .forms import (
     RECETA_INSUMO_FORMSET_PREFIX,
+    InsumoFilterForm,
     InsumoForm,
     MermaFilterForm,
     MermaForm,
+    ProductoFilterForm,
     ProductoForm,
     RecetaInsumoFormSet,
     VentaFilterForm,
 )
+from .listados import ListadoMixin, buscar_por_nombre_o_codigo
+
+DINERO = DecimalField(max_digits=28, decimal_places=6)
+
+
+def inicio_del_dia(fecha):
+    return timezone.make_aware(datetime.datetime.combine(fecha, datetime.time.min))
+
+
+def fin_del_dia(fecha):
+    return timezone.make_aware(datetime.datetime.combine(fecha, datetime.time.max))
+
+
+def filtrar_por_fechas(queryset, datos, campo='fecha'):
+    if datos.get('fecha_desde'):
+        queryset = queryset.filter(**{f'{campo}__gte': inicio_del_dia(datos['fecha_desde'])})
+    if datos.get('fecha_hasta'):
+        queryset = queryset.filter(**{f'{campo}__lte': fin_del_dia(datos['fecha_hasta'])})
+    return queryset
+
+
+def filtrar_por_estado(queryset, estado):
+    if estado == 'activos':
+        return queryset.filter(activo=True)
+    if estado == 'inactivos':
+        return queryset.filter(activo=False)
+    return queryset
 
 
 class DashboardIndexView(GroupRequiredMixin, TemplateView):
@@ -99,18 +131,6 @@ class DashboardIndexView(GroupRequiredMixin, TemplateView):
         return context
 
 
-class PreserveQuerystringMixin:
-    """Agrega al contexto la querystring actual (sin 'page') para armar
-    los enlaces de paginación conservando filtros/búsqueda."""
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        params = self.request.GET.copy()
-        params.pop('page', None)
-        context['querystring'] = params.urlencode()
-        return context
-
-
 class ProtectedDeleteMixin:
     """Maneja con gracia el borrado de objetos protegidos (on_delete=PROTECT)."""
 
@@ -135,23 +155,45 @@ class ProtectedDeleteMixin:
 # Insumo
 # ---------------------------------------------------------------------------
 
-class InsumoListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
+class InsumoListView(ListadoMixin, GroupRequiredMixin, ListView):
     model = Insumo
     template_name = 'dashboard/insumo_list.html'
     context_object_name = 'insumos'
-    paginate_by = 20
     allowed_groups = ['Administrador']
+    filtro_form_class = InsumoFilterForm
+    columnas_orden = {
+        'codigo': 'pk',
+        'nombre': 'nombre',
+        'unidad': 'unidad_medida',
+        'stock': 'stock_actual',
+        'minimo': 'stock_minimo',
+        'costo': 'costo_unitario',
+        'valor': 'valor',
+        'activo': 'activo',
+    }
+    orden_defecto = 'nombre'
 
-    def get_queryset(self):
-        queryset = Insumo.objects.all()
-        q = self.request.GET.get('q', '').strip()
-        if q:
-            queryset = queryset.filter(nombre__icontains=q)
-        return queryset
+    def filtrar(self, queryset, datos):
+        queryset = buscar_por_nombre_o_codigo(queryset, datos.get('q'), Insumo.PREFIJO)
+        if datos.get('unidad'):
+            queryset = queryset.filter(unidad_medida=datos['unidad'])
+        if datos.get('stock') == 'bajo':
+            queryset = queryset.filter(stock_actual__lte=F('stock_minimo'))
+        elif datos.get('stock') == 'normal':
+            queryset = queryset.filter(stock_actual__gt=F('stock_minimo'))
+        return filtrar_por_estado(queryset, datos.get('estado'))
+
+    def get_queryset_filtrado(self):
+        self.queryset = Insumo.objects.annotate(
+            valor=ExpressionWrapper(F('stock_actual') * F('costo_unitario'), output_field=DINERO),
+        )
+        return super().get_queryset_filtrado()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['q'] = self.request.GET.get('q', '')
+        filtrado = self.get_queryset_filtrado()
+        context['valor_total'] = filtrado.aggregate(total=Sum('valor'))['total'] or 0
+        context['insumos_en_alerta'] = filtrado.filter(stock_actual__lte=F('stock_minimo')).count()
         return context
 
 
@@ -188,24 +230,55 @@ class InsumoDeleteView(GroupRequiredMixin, ProtectedDeleteMixin, DeleteView):
 # Producto (con formset inline de RecetaInsumo)
 # ---------------------------------------------------------------------------
 
-class ProductoListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
+class ProductoListView(ListadoMixin, GroupRequiredMixin, ListView):
     model = Producto
     template_name = 'dashboard/producto_list.html'
     context_object_name = 'productos'
-    paginate_by = 20
     allowed_groups = ['Administrador']
+    filtro_form_class = ProductoFilterForm
+    columnas_orden = {
+        'codigo': 'pk',
+        'nombre': 'nombre',
+        'categoria': 'categoria',
+        'precio': 'precio_venta',
+        'costo': 'costo_total',
+        'margen': 'margen_pct',
+        'activo': 'activo',
+    }
+    orden_defecto = 'nombre'
 
-    def get_queryset(self):
-        queryset = Producto.objects.all()
-        q = self.request.GET.get('q', '').strip()
-        if q:
-            queryset = queryset.filter(nombre__icontains=q)
-        return queryset
+    def get_queryset_filtrado(self):
+        costo = Coalesce(
+            Sum(
+                F('receta_insumos__cantidad_requerida') * F('receta_insumos__insumo__costo_unitario'),
+                output_field=DINERO,
+            ),
+            Value(0, output_field=DINERO),
+        )
+        self.queryset = Producto.objects.annotate(costo_total=costo).annotate(
+            margen_pct=Case(
+                When(
+                    precio_venta__gt=0,
+                    then=ExpressionWrapper(
+                        (F('precio_venta') - F('costo_total')) * 100 / F('precio_venta'),
+                        output_field=DINERO,
+                    ),
+                ),
+                default=None,
+                output_field=DINERO,
+            ),
+        )
+        return super().get_queryset_filtrado()
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['q'] = self.request.GET.get('q', '')
-        return context
+    def filtrar(self, queryset, datos):
+        queryset = buscar_por_nombre_o_codigo(queryset, datos.get('q'), Producto.PREFIJO)
+        if datos.get('categoria'):
+            queryset = queryset.filter(categoria=datos['categoria'])
+        if datos.get('precio_min') is not None:
+            queryset = queryset.filter(precio_venta__gte=datos['precio_min'])
+        if datos.get('precio_max') is not None:
+            queryset = queryset.filter(precio_venta__lte=datos['precio_max'])
+        return filtrar_por_estado(queryset, datos.get('estado'))
 
 
 class ProductoFormsetMixin:
@@ -289,37 +362,41 @@ class MermaCreateView(GroupRequiredMixin, CreateView):
         return reverse('pos:index')
 
 
-class MermaListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
+class MermaListView(ListadoMixin, GroupRequiredMixin, ListView):
     model = Merma
     template_name = 'dashboard/merma_list.html'
     context_object_name = 'mermas'
-    paginate_by = 20
     allowed_groups = ['Administrador']
+    filtro_form_class = MermaFilterForm
+    columnas_orden = {
+        'codigo': 'pk',
+        'fecha': 'fecha',
+        'insumo': 'insumo__nombre',
+        'cantidad': 'cantidad',
+        'causa': 'causa',
+        'costo': 'costo_merma',
+        'responsable': 'usuario_responsable__username',
+    }
+    orden_defecto = '-fecha'
 
-    def get_queryset(self):
-        queryset = Merma.objects.select_related('insumo', 'usuario_responsable').all()
-        form = MermaFilterForm(self.request.GET or None)
-        if form.is_valid():
-            data = form.cleaned_data
-            if data.get('insumo'):
-                queryset = queryset.filter(insumo=data['insumo'])
-            if data.get('causa'):
-                queryset = queryset.filter(causa=data['causa'])
-            if data.get('fecha_desde'):
-                inicio = timezone.make_aware(
-                    datetime.datetime.combine(data['fecha_desde'], datetime.time.min)
-                )
-                queryset = queryset.filter(fecha__gte=inicio)
-            if data.get('fecha_hasta'):
-                fin = timezone.make_aware(
-                    datetime.datetime.combine(data['fecha_hasta'], datetime.time.max)
-                )
-                queryset = queryset.filter(fecha__lte=fin)
-        return queryset
+    def get_queryset_filtrado(self):
+        self.queryset = Merma.objects.select_related('insumo', 'usuario_responsable').annotate(
+            costo_merma=ExpressionWrapper(F('cantidad') * F('insumo__costo_unitario'), output_field=DINERO),
+        )
+        return super().get_queryset_filtrado()
+
+    def filtrar(self, queryset, datos):
+        if datos.get('insumo'):
+            queryset = queryset.filter(insumo=datos['insumo'])
+        if datos.get('causa'):
+            queryset = queryset.filter(causa=datos['causa'])
+        if datos.get('responsable'):
+            queryset = queryset.filter(usuario_responsable=datos['responsable'])
+        return filtrar_por_fechas(queryset, datos)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['filter_form'] = MermaFilterForm(self.request.GET or None)
+        context['costo_total'] = self.get_queryset_filtrado().aggregate(total=Sum('costo_merma'))['total'] or 0
         return context
 
 
@@ -327,39 +404,46 @@ class MermaListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
 # Venta (historial)
 # ---------------------------------------------------------------------------
 
-class VentaListView(PreserveQuerystringMixin, GroupRequiredMixin, ListView):
+class VentaListView(ListadoMixin, GroupRequiredMixin, ListView):
     model = Venta
     template_name = 'dashboard/venta_list.html'
     context_object_name = 'ventas'
-    paginate_by = 20
     allowed_groups = ['Administrador']
+    filtro_form_class = VentaFilterForm
+    columnas_orden = {
+        'folio': 'pk',
+        'fecha': 'fecha',
+        'cajero': 'usuario_cajero__username',
+        'productos': 'num_productos',
+        'total': 'total',
+    }
+    orden_defecto = '-fecha'
 
-    def get_queryset(self):
-        queryset = (
-            Venta.objects.select_related('usuario_cajero')
-            .annotate(num_productos=Count('detalles__producto', distinct=True))
-            .order_by('-fecha')
+    def get_queryset_filtrado(self):
+        self.queryset = Venta.objects.select_related('usuario_cajero').annotate(
+            num_productos=Coalesce(Sum('detalles__cantidad'), Value(0, output_field=DINERO)),
         )
-        form = VentaFilterForm(self.request.GET or None)
-        if form.is_valid():
-            data = form.cleaned_data
-            if data.get('usuario_cajero'):
-                queryset = queryset.filter(usuario_cajero=data['usuario_cajero'])
-            if data.get('fecha_desde'):
-                inicio = timezone.make_aware(
-                    datetime.datetime.combine(data['fecha_desde'], datetime.time.min)
-                )
-                queryset = queryset.filter(fecha__gte=inicio)
-            if data.get('fecha_hasta'):
-                fin = timezone.make_aware(
-                    datetime.datetime.combine(data['fecha_hasta'], datetime.time.max)
-                )
-                queryset = queryset.filter(fecha__lte=fin)
-        return queryset
+        return super().get_queryset_filtrado()
+
+    def filtrar(self, queryset, datos):
+        queryset = buscar_por_nombre_o_codigo(
+            queryset, datos.get('q'), Venta.PREFIJO, campo='usuario_cajero__username',
+        ) if datos.get('q') else queryset
+        if datos.get('usuario_cajero'):
+            queryset = queryset.filter(usuario_cajero=datos['usuario_cajero'])
+        if datos.get('producto'):
+            queryset = queryset.filter(
+                Exists(DetalleVenta.objects.filter(venta=OuterRef('pk'), producto=datos['producto']))
+            )
+        if datos.get('total_min') is not None:
+            queryset = queryset.filter(total__gte=datos['total_min'])
+        if datos.get('total_max') is not None:
+            queryset = queryset.filter(total__lte=datos['total_max'])
+        return filtrar_por_fechas(queryset, datos)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['filter_form'] = VentaFilterForm(self.request.GET or None)
+        context['monto_total'] = self.get_queryset_filtrado().aggregate(total=Sum('total'))['total'] or 0
         return context
 
 

@@ -1,25 +1,51 @@
-{% if is_paginated %}
-<nav aria-label="Paginación">
-  <ul class="pagination">
-    {% if page_obj.has_previous %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">Anterior</a>
-      </li>
+{% comment %}
+Pie de tabla: contador de resultados, tamaño de página y navegación.
+{% endcomment %}
+{% if total_resultados %}
+<div class="tabla-pie">
+  <div class="tabla-pie-info">
+    {% if page_obj %}
+      Mostrando <strong>{{ page_obj.start_index }}–{{ page_obj.end_index }}</strong> de <strong>{{ total_resultados }}</strong>
     {% else %}
-      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      <strong>{{ total_resultados }}</strong> registro{{ total_resultados|pluralize }}
     {% endif %}
+    <span class="tabla-pie-separador">·</span>
+    <label class="tabla-pie-tamano">
+      <select class="form-select form-select-sm" data-por-pagina data-base="{{ querystring_sin_tamano }}" aria-label="Registros por página">
+        {% for n in opciones_por_pagina %}
+          <option value="{{ n }}"{% if n == por_pagina %} selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+      por página
+    </label>
+  </div>
 
-    <li class="page-item disabled">
-      <span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
-    </li>
-
-    {% if page_obj.has_next %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}">Siguiente</a>
+  {% if is_paginated %}
+  <nav aria-label="Paginación">
+    <ul class="pagination pagination-sm mb-0">
+      <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+        <a class="page-link" href="?page=1{% if querystring %}&{{ querystring }}{% endif %}" aria-label="Primera página"><i class="bi bi-chevron-double-left"></i></a>
       </li>
-    {% else %}
-      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
-    {% endif %}
-  </ul>
-</nav>
+      <li class="page-item{% if not page_obj.has_previous %} disabled{% endif %}">
+        <a class="page-link" href="?page={% if page_obj.has_previous %}{{ page_obj.previous_page_number }}{% else %}1{% endif %}{% if querystring %}&{{ querystring }}{% endif %}" aria-label="Anterior"><i class="bi bi-chevron-left"></i></a>
+      </li>
+      {% for numero in paginas %}
+        {% if numero == elipsis %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% elif numero == page_obj.number %}
+          <li class="page-item active" aria-current="page"><span class="page-link">{{ numero }}</span></li>
+        {% else %}
+          <li class="page-item"><a class="page-link" href="?page={{ numero }}{% if querystring %}&{{ querystring }}{% endif %}">{{ numero }}</a></li>
+        {% endif %}
+      {% endfor %}
+      <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+        <a class="page-link" href="?page={% if page_obj.has_next %}{{ page_obj.next_page_number }}{% else %}{{ page_obj.paginator.num_pages }}{% endif %}{% if querystring %}&{{ querystring }}{% endif %}" aria-label="Siguiente"><i class="bi bi-chevron-right"></i></a>
+      </li>
+      <li class="page-item{% if not page_obj.has_next %} disabled{% endif %}">
+        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if querystring %}&{{ querystring }}{% endif %}" aria-label="Última página"><i class="bi bi-chevron-double-right"></i></a>
+      </li>
+    </ul>
+  </nav>
+  {% endif %}
+</div>
 {% endif %}

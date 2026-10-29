@@ -1,0 +1,26 @@
+{% comment %}
+Barra de filtros de un listado. Usa filtro_form, hay_filtros y orden_actual
+del ListadoMixin; conserva el orden y el tamaño de página al filtrar.
+{% endcomment %}
+{% if filtro_form %}
+<form method="get" class="filtros" role="search">
+  <div class="filtros-campos">
+    {% for campo in filtro_form %}
+      {% if campo.is_hidden %}{{ campo }}{% else %}
+        <div class="filtro{% if campo.name == 'q' %} filtro-ancho{% endif %}">
+          <label class="form-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+          {{ campo }}
+        </div>
+      {% endif %}
+    {% endfor %}
+    {% if request.GET.orden %}<input type="hidden" name="orden" value="{{ request.GET.orden }}">{% endif %}
+    {% if request.GET.por_pagina %}<input type="hidden" name="por_pagina" value="{{ request.GET.por_pagina }}">{% endif %}
+    <div class="filtros-acciones">
+      <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel me-1"></i>Filtrar</button>
+      {% if hay_filtros %}
+        <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Limpiar</a>
+      {% endif %}
+    </div>
+  </div>
+</form>
+{% endif %}
