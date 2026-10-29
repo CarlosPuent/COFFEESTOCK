@@ -1,5 +1,6 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
+{% load formato %}
 {% block title %}Insumos - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
@@ -32,11 +33,11 @@
       </thead>
       <tbody>
         {% for insumo in insumos %}
-          <tr class="{% if insumo.stock_actual < insumo.stock_minimo %}table-danger{% endif %}">
+          <tr class="{% if insumo.stock_bajo %}table-danger{% endif %}">
             <td>{{ insumo.nombre }}</td>
             <td>{{ insumo.get_unidad_medida_display }}</td>
-            <td>{{ insumo.stock_actual }}</td>
-            <td>{{ insumo.stock_minimo }}</td>
+            <td>{{ insumo.stock_actual|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</td>
+            <td>{{ insumo.stock_minimo|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</td>
             <td>{% if insumo.activo %}<span class="badge-estado badge-estado-si">Sí</span>{% else %}<span class="badge-estado badge-estado-no">No</span>{% endif %}</td>
             <td class="text-end">
               <a href="{% url 'dashboard:insumo_update' insumo.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i></a>

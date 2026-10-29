@@ -1,5 +1,6 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
+{% load formato %}
 {% block title %}Mermas - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
@@ -47,8 +48,8 @@
       <tbody>
         {% for merma in mermas %}
           <tr>
-            <td>{{ merma.insumo }}</td>
-            <td>{{ merma.cantidad }}</td>
+            <td>{{ merma.insumo.nombre }}</td>
+            <td>{{ merma.cantidad|cantidad }} {{ merma.insumo.unidad_medida|unidad_corta }}</td>
             <td>{{ merma.get_causa_display }}</td>
             <td>{{ merma.usuario_responsable.get_username }}</td>
             <td>{{ merma.fecha|date:"d/m/Y H:i" }}</td>
@@ -68,6 +69,4 @@
     {% include 'partials/_estado_vacio.html' with icono="bi-clipboard2-check" titulo="Sin mermas registradas" texto="Aquí aparecerá el historial de insumos dados de baja por caducidad, mala preparación u otra causa." url_accion=crear_url etiqueta_accion="Registrar una merma" icono_accion="bi-clipboard2-plus" %}
   {% endif %}
 {% endif %}
-
-{% include 'dashboard/_pagination.html' %}
 {% endblock %}

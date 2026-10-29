@@ -1,5 +1,6 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
+{% load formato %}
 {% block title %}Venta #{{ venta.id }} - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
@@ -23,7 +24,7 @@
       </div>
       <div class="col">
         <div class="text-muted small">Total</div>
-        <div class="fw-semibold">${{ venta.total }}</div>
+        <div class="fw-semibold">{{ venta.total|moneda }}</div>
       </div>
     </div>
   </div>
@@ -43,8 +44,8 @@
       {% for detalle in venta.detalles.all %}
         <tr>
           <td>{{ detalle.producto.nombre }}</td>
-          <td>{{ detalle.cantidad }}</td>
-          <td>${{ detalle.subtotal }}</td>
+          <td>{{ detalle.cantidad|cantidad }}</td>
+          <td>{{ detalle.subtotal|moneda }}</td>
         </tr>
       {% empty %}
         <tr><td colspan="3" class="text-center text-muted">Esta venta no tiene detalles.</td></tr>

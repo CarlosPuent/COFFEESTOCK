@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load formato %}
 {% block title %}Punto de venta - CoffeeStock{% endblock %}
 {% block content %}
 <div class="pos-page d-flex flex-column">
@@ -113,7 +114,7 @@
               </div>
               {% endif %}
               <div class="fw-bold">{{ producto.nombre }}</div>
-              <div class="producto-precio">${{ producto.precio_venta }}</div>
+              <div class="producto-precio">{{ producto.precio_venta|moneda }}</div>
             </button>
           </div>
           {% endfor %}

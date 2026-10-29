@@ -1,5 +1,6 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
+{% load formato %}
 {% block title %}Productos - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
@@ -34,7 +35,7 @@
           <tr>
             <td>{{ producto.nombre }}</td>
             <td>{{ producto.get_categoria_display }}</td>
-            <td>{{ producto.precio_venta }}</td>
+            <td>{{ producto.precio_venta|moneda }}</td>
             <td>{% if producto.activo %}<span class="badge-estado badge-estado-si">Sí</span>{% else %}<span class="badge-estado badge-estado-no">No</span>{% endif %}</td>
             <td class="text-end">
               <a href="{% url 'dashboard:producto_update' producto.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i></a>

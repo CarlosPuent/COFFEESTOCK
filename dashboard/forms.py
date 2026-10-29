@@ -7,6 +7,25 @@ from core.models import Insumo, Merma, Producto, RecetaInsumo
 User = get_user_model()
 
 
+def campo_fecha(label):
+    """Campo de fecha para filtros: se muestra como dd/mm/aaaa con el
+    selector de calendario y se envía como AAAA-MM-DD."""
+    return forms.DateField(
+        required=False,
+        label=label,
+        input_formats=['%Y-%m-%d', '%d/%m/%Y'],
+        widget=forms.DateInput(
+            format='%Y-%m-%d',
+            attrs={
+                'class': 'form-control form-control-sm',
+                'data-fecha': '',
+                'placeholder': 'dd/mm/aaaa',
+                'autocomplete': 'off',
+            },
+        ),
+    )
+
+
 def anteponer_opcion_vacia(campo, texto):
     """Reemplaza la opción vacía por defecto de Django ('---------') por una
     etiqueta en español, conservando el resto de las opciones."""
@@ -63,19 +82,13 @@ class MermaFilterForm(forms.Form):
         required=False,
         label='Causa',
     )
-    fecha_desde = forms.DateField(
-        required=False, label='Desde', widget=forms.DateInput(attrs={'type': 'date'})
-    )
-    fecha_hasta = forms.DateField(
-        required=False, label='Hasta', widget=forms.DateInput(attrs={'type': 'date'})
-    )
+    fecha_desde = campo_fecha('Desde')
+    fecha_hasta = campo_fecha('Hasta')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['insumo'].widget.attrs['class'] = 'form-select form-select-sm'
         self.fields['causa'].widget.attrs['class'] = 'form-select form-select-sm'
-        self.fields['fecha_desde'].widget.attrs['class'] = 'form-control form-control-sm'
-        self.fields['fecha_hasta'].widget.attrs['class'] = 'form-control form-control-sm'
 
 
 class VentaFilterForm(forms.Form):
@@ -85,18 +98,12 @@ class VentaFilterForm(forms.Form):
         label='Cajero',
         empty_label='Todos los cajeros',
     )
-    fecha_desde = forms.DateField(
-        required=False, label='Desde', widget=forms.DateInput(attrs={'type': 'date'})
-    )
-    fecha_hasta = forms.DateField(
-        required=False, label='Hasta', widget=forms.DateInput(attrs={'type': 'date'})
-    )
+    fecha_desde = campo_fecha('Desde')
+    fecha_hasta = campo_fecha('Hasta')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['usuario_cajero'].widget.attrs['class'] = 'form-select form-select-sm'
-        self.fields['fecha_desde'].widget.attrs['class'] = 'form-control form-control-sm'
-        self.fields['fecha_hasta'].widget.attrs['class'] = 'form-control form-control-sm'
 
 
 RECETA_INSUMO_FORMSET_PREFIX = 'receta_insumos'

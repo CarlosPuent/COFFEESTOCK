@@ -1,5 +1,6 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
+{% load formato %}
 {% block title %}Ventas - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
@@ -46,7 +47,7 @@
             <td>{{ venta.fecha|date:"d/m/Y H:i" }}</td>
             <td>{{ venta.usuario_cajero.get_username }}</td>
             <td>{{ venta.num_productos }}</td>
-            <td>${{ venta.total }}</td>
+            <td>{{ venta.total|moneda }}</td>
             <td class="text-end">
               <a href="{% url 'dashboard:venta_detail' venta.pk %}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-eye"></i> Ver detalle
@@ -67,6 +68,4 @@
     {% include 'partials/_estado_vacio.html' with icono="bi-receipt" titulo="Aún no hay ventas" texto="Cuando se registre la primera venta desde el punto de venta, aparecerá aquí con su detalle." url_accion=pos_url etiqueta_accion="Ir al punto de venta" icono_accion="bi-shop" %}
   {% endif %}
 {% endif %}
-
-{% include 'dashboard/_pagination.html' %}
 {% endblock %}

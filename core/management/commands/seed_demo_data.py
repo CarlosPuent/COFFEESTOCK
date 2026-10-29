@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
-from django.db import transaction
+from django.db import connection, transaction
 from django.db.models import F
 from django.utils import timezone
 
@@ -39,6 +39,9 @@ class Command(BaseCommand):
             RecetaInsumo.objects.all().delete()
             Producto.objects.all().delete()
             Insumo.objects.all().delete()
+            self._reiniciar_numeracion(
+                [DetalleVenta, Venta, Merma, RecetaInsumo, Producto, Insumo]
+            )
         elif hay_datos:
             respuesta = input(
                 'Ya existen insumos, productos o ventas en la base de datos.\n'
@@ -62,6 +65,23 @@ class Command(BaseCommand):
             f'Datos de ejemplo creados: {len(insumos)} insumos, {len(productos)} productos, '
             f'{Venta.objects.count()} ventas, {Merma.objects.count()} mermas.'
         ))
+
+    def _reiniciar_numeracion(self, modelos):
+        """Hace que los IDs vuelvan a empezar en 1 después de --reset."""
+        if connection.vendor != 'microsoft':
+            return
+        with connection.cursor() as cursor:
+            for modelo in modelos:
+                tabla = modelo._meta.db_table
+                # Si la tabla nunca tuvo filas, RESEED 0 haría que el primer
+                # ID fuera 0, así que solo se reinicia si ya se usó.
+                cursor.execute(
+                    'SELECT CAST(last_value AS bigint) FROM sys.identity_columns WHERE object_id = OBJECT_ID(%s)',
+                    [tabla],
+                )
+                fila = cursor.fetchone()
+                if fila and fila[0] is not None:
+                    cursor.execute(f"DBCC CHECKIDENT ('{tabla}', RESEED, 0) WITH NO_INFOMSGS")
 
     # ------------------------------------------------------------------
     # Insumos
@@ -191,12 +211,18 @@ class Command(BaseCommand):
         ahora = timezone.now()
         num_ventas = random.randint(15, 20)
 
-        for _ in range(num_ventas):
-            momento = ahora - datetime.timedelta(
+        # Se generan las fechas primero y se ordenan, para que los números de
+        # venta vayan en el mismo orden que las fechas.
+        momentos = sorted(
+            ahora - datetime.timedelta(
                 days=random.randint(0, 6),
                 hours=random.randint(0, 10),
                 minutes=random.randint(0, 59),
             )
+            for _ in range(num_ventas)
+        )
+
+        for momento in momentos:
             cajero = random.choice(usuarios)
             num_lineas = random.randint(1, 3)
             productos_venta = random.sample(catalogo, k=min(num_lineas, len(catalogo)))
@@ -231,15 +257,20 @@ class Command(BaseCommand):
              'Botella abierta fuera de fecha de consumo.'),
         ]
 
-        for nombre_insumo, cantidad, causa, observacion in datos:
+        # Fechas ordenadas, para que los números de merma sigan la cronología.
+        momentos = sorted(
+            ahora - datetime.timedelta(
+                days=random.randint(0, 6), hours=random.randint(0, 10), minutes=random.randint(0, 59)
+            )
+            for _ in datos
+        )
+
+        for (nombre_insumo, cantidad, causa, observacion), momento in zip(datos, momentos):
             insumo = insumos.get(nombre_insumo)
             if insumo is None:
                 continue
 
             responsable = random.choice(usuarios)
-            momento = ahora - datetime.timedelta(
-                days=random.randint(0, 6), hours=random.randint(0, 10)
-            )
 
             merma = Merma.objects.create(
                 insumo=insumo,

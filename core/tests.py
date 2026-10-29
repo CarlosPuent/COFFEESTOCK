@@ -206,3 +206,14 @@ class LeerEnvTests(TestCase):
             finally:
                 for clave in ('PRUEBA_ENV_A', 'PRUEBA_ENV_B'):
                     os.environ.pop(clave, None)
+
+
+class FormatoTests(TestCase):
+    def test_filtros_de_numeros(self):
+        from core.templatetags.formato import cantidad, moneda, unidad_corta
+
+        self.assertEqual(moneda('1234.5'), '$1,234.50')
+        self.assertEqual(moneda(None), '—')
+        self.assertEqual(cantidad('8000.00'), '8,000')
+        self.assertEqual(cantidad('12.50'), '12.5')
+        self.assertEqual(unidad_corta('unidad'), 'u')

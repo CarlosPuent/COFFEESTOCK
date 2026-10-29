@@ -1,5 +1,6 @@
 {% extends 'dashboard/dashboard_base.html' %}
 
+{% load formato %}
 {% block title %}Dashboard - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
@@ -21,8 +22,8 @@
         <div class="col">
           <div class="alert alert-danger mb-0 h-100">
             <div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ insumo.nombre }}</div>
-            <div>Stock actual: {{ insumo.stock_actual }} {{ insumo.get_unidad_medida_display }}</div>
-            <div>Stock mínimo: {{ insumo.stock_minimo }} {{ insumo.get_unidad_medida_display }}</div>
+            <div>Stock actual: {{ insumo.stock_actual|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</div>
+            <div>Stock mínimo: {{ insumo.stock_minimo|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</div>
           </div>
         </div>
       {% endfor %}
@@ -75,7 +76,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+{% load static %}<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
 <script>
 (function () {
   {% if ventas_has_data %}
