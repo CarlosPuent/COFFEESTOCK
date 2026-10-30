@@ -1,11 +1,24 @@
 # ☕ CoffeeStock
 
-Sistema para cafeterías: punto de venta, inventario de insumos, productos con
-receta, mermas, alertas de stock bajo por correo y dashboard con reportes.
-Hecho con Django y SQL Server.
+Sistema para cafeterías hecho con Django y SQL Server. Cubre el día a día de
+un negocio de café, desde que llega el insumo hasta que se cierra la caja:
 
-> **Avance 1 de 2.** Lo que falta para la entrega final está al final:
-> [Pendiente para el Avance 2](#pendiente-para-el-avance-2).
+| Módulo | Qué hace |
+|---|---|
+| **Punto de venta** | Venta rápida con efectivo o tarjeta, cálculo del cambio, ticket de 80 mm y reimpresión del último ticket. |
+| **Insumos** | Café, leche, vasos… con stock, mínimo, costo promedio y valor en inventario. |
+| **Productos y recetas** | Cada producto descuenta sus insumos al venderse; muestra costo de la receta y margen en vivo. |
+| **Compras y proveedores** | Entradas de inventario con factura y proveedor; actualizan stock y costo promedio. |
+| **Mermas** | Lo que se pierde (vencido, derramado, mal preparado), con su costo. |
+| **Ventas** | Historial con filtros, detalle, anulación con motivo (devuelve el stock) y ticket. |
+| **Corte de caja** | Efectivo, tarjeta, por cajero, por producto y por hora; en pantalla y en PDF. |
+| **Reportes** | PDF para leer o firmar, Excel para analizar (ver [Reportes](#reportes)). |
+| **Dashboard** | Ventas de hoy y del mes, ticket promedio, horas pico, productos estrella e insumos por reponer. |
+| **Usuarios** | Alta de cajeros y administradores, cambio de contraseña y desactivación. |
+| **Alertas por correo** | Aviso cuando un insumo baja de su mínimo (SendGrid o Gmail), enviado en segundo plano. |
+
+Todas las tablas tienen código visible (`INS-0001`, `V-000001`…), buscador,
+filtros, orden por columna, paginación y exportación a Excel.
 
 Esta guía es para **Windows**. Sigue los pasos en orden, del 1 al 12, sin
 saltarte ninguno. Cada paso dice qué hacer y qué deberías ver si salió bien.
@@ -230,6 +243,11 @@ Responde `S` (o `Y`), Enter, y vuelve a correr `venv\Scripts\Activate.ps1`.
 
    ALERTA_EMAIL_PROVEEDOR=consola
    ALERTA_EMAIL_DESTINATARIOS=tu_correo@gmail.com
+
+   NEGOCIO_NOMBRE=CoffeeStock Café
+   NEGOCIO_DIRECCION=San Salvador, El Salvador
+   NEGOCIO_TELEFONO=
+   NEGOCIO_NIT=
    ```
 
 4. Cambia dos cosas:
@@ -241,6 +259,9 @@ Responde `S` (o `Y`), Enter, y vuelve a correr `venv\Scripts\Activate.ps1`.
 
 > `DB_USER` y `DB_PASSWORD` van **vacíos**: así el sistema entra a SQL Server
 > con tu usuario de Windows, igual que SSMS en el paso 3.
+>
+> Las líneas `NEGOCIO_...` son los datos que salen en el ticket y en los
+> reportes PDF. Puedes cambiarlos cuando quieras.
 >
 > `ALERTA_EMAIL_PROVEEDOR=consola` significa que, por ahora, las alertas se
 > muestran en la PowerShell en vez de enviarse. En el paso 11 lo cambias para
@@ -275,7 +296,7 @@ python manage.py seed_demo_data
 | `migrate` | Una lista de `Applying ... OK` |
 | `create_groups` | `Grupos "Administrador" y "Cajero" creados/actualizados...` |
 | `create_test_users` | `Usuarios de prueba "cajero1" y "admin_coffeestock" creados/actualizados.` |
-| `seed_demo_data` | `Datos de ejemplo creados: 10 insumos, 8 productos, ...` |
+| `seed_demo_data` | `Datos de ejemplo creados: 12 insumos, 8 productos, 4 proveedores, 6 compras, ...` |
 
 ❌ Si `migrate` falla, es un problema de conexión con SQL Server. Revisa que
 `DB_HOST` en el `.env` sea exactamente TU_SERVIDOR y mira
@@ -298,8 +319,8 @@ Usuarios de prueba:
 
 | Usuario | Contraseña | Qué puede hacer |
 |---|---|---|
-| `admin_coffeestock` | `Admin123!` | Todo: dashboard, insumos, productos, ventas, mermas y POS |
-| `cajero1` | `Cajero123!` | Punto de venta y registrar mermas |
+| `admin_coffeestock` | `Admin123!` | Todo: dashboard, inventario, compras, ventas, reportes, usuarios y POS |
+| `cajero1` | `Cajero123!` | Punto de venta, registrar mermas y ver su propio corte de caja |
 
 Para apagar el sistema: clic en la PowerShell y **Ctrl + C**.
 
@@ -310,31 +331,39 @@ Para apagar el sistema: clic en la PowerShell y **Ctrl + C**.
 **A. Hacer una venta (como cajero)**
 
 1. Entra con `cajero1` / `Cajero123!`. Se abre el **punto de venta**.
-2. Clic en **Cappuccino** y en **Croissant**. Aparecen en el carrito a la
-   derecha con su total.
-3. Clic en **Confirmar venta**. Arriba sale en verde
-   `Venta #... registrada correctamente. Total: ...`.
-4. Arriba a la derecha, **Salir**.
+2. Clic en **Cappuccino** dos veces y una en **Croissant**. Aparecen en el
+   carrito con su total ($7.75).
+3. En **Pago** deja **Efectivo** y toca el botón **$10**. Abajo dice
+   **Cambio $2.25**.
+4. Clic en **Confirmar venta**. Sale una ventana con el folio (`V-0000..`) y el
+   cambio. Clic en **Imprimir ticket** para ver el ticket.
+5. Arriba, **Mi corte** muestra lo que vendiste hoy. Luego **Salir**.
 
 **B. Revisar como administrador**
 
 1. Entra con `admin_coffeestock` / `Admin123!`. Se abre el **Dashboard**:
-   - Tarjetas rojas con los insumos que están bajo el mínimo
-     (**Café en grano robusta** y **Sirope de caramelo**).
-   - Gráficas de ventas de 7 días, top 5 de productos y mermas del mes.
-2. Menú **Ventas**: la venta del cajero aparece de primera. Clic en ella para
-   ver el detalle.
-3. Menú **Insumos**: la leche, el café y la harina bajaron por la receta de lo
-   que se vendió.
+   ventas de hoy, ticket promedio, ventas del mes, insumos en alerta
+   (**Café en grano robusta** y **Sirope de caramelo**) y valor del inventario.
+   Abajo: ventas por día, productos que más venden, horas pico y mermas.
+2. Menú **Ventas**: la venta del cajero aparece primero. Ábrela y prueba
+   **Anular venta**: pide un motivo y devuelve los insumos al stock.
+3. Menú **Compras** → **Registrar compra**: elige un proveedor, agrega
+   **Sirope de caramelo**, cantidad `1000` y monto `$12.00`. Al guardar, el
+   stock sube y el insumo sale de la lista de alertas.
+4. Menú **Corte de caja**: totales del día por forma de pago, por cajero y por
+   producto. **Descargar PDF** genera el corte con espacio para firmas.
+5. Menú **Reportes**: elige un período y descarga cualquiera de los reportes.
+6. En cualquier tabla prueba el buscador, los filtros, el orden por columna
+   (clic en el encabezado) y **Exportar Excel**.
 
 **C. Provocar una alerta de stock bajo**
 
-1. Menú **Registrar merma**.
-2. Insumo: **Sirope de caramelo**. Cantidad: `10`. Causa: la que quieras.
+1. Menú **Mermas** → **Registrar merma**.
+2. Insumo: **Leche de almendra**. Cantidad: `1600`. Causa: la que quieras.
 3. Clic en **Registrar merma**.
 4. Mira la PowerShell donde corre el sistema. Aparece el correo de alerta
-   impreso, con el asunto `[CoffeeStock] Stock bajo: Sirope de caramelo`, y al
-   final la línea `Alerta de stock de "Sirope de caramelo" enviada.`
+   impreso, con el asunto `[CoffeeStock] Stock bajo: Leche de almendra`, y al
+   final la línea `Alerta de stock de "Leche de almendra" enviada.`
 
 ✅ Si ves todo esto, el sistema funciona completo. Solo falta que la alerta
 llegue a un correo real (paso 11).
@@ -471,16 +500,16 @@ python manage.py runserver
 ```
 
 1. Entra con `admin_coffeestock` / `Admin123!`.
-2. Menú **Registrar merma** → Insumo **Sirope de caramelo** → Cantidad `10` →
-   **Registrar merma**.
+2. Menú **Mermas** → **Registrar merma** → Insumo **Café en grano robusta** →
+   Cantidad `10` → **Registrar merma**.
 3. En la PowerShell aparece:
-   `Alerta de stock de "Sirope de caramelo" enviada. SendGrid aceptó el correo (status 202).`
-4. En tu correo llega **"[CoffeeStock] Stock bajo: Sirope de caramelo"**.
+   `Alerta de stock de "Café en grano robusta" enviada. SendGrid aceptó el correo (status 202).`
+4. En tu correo llega **"[CoffeeStock] Stock bajo: Café en grano robusta"**.
 
 ✅ Listo. La instalación está completa.
 
 **Para mostrar otra alerta** sin reiniciar: registra una merma de `10` en
-**Café en grano robusta**, que también está bajo el mínimo.
+**Sirope de caramelo**, que también está bajo el mínimo.
 
 **Cuándo se manda una alerta:** cuando una venta, una merma o una edición de
 insumo deja el stock **en o por debajo del mínimo**. Si el correo falla, la
@@ -506,6 +535,84 @@ python manage.py runserver
 
 Y abre http://127.0.0.1:8000/. Si SQL Server está apagado, enciéndelo como en
 el paso 2.
+
+---
+
+## Actualizar una instalación que ya funcionaba
+
+Si ya tenías CoffeeStock instalado y descargas una versión nueva, abre
+PowerShell y corre, uno a la vez:
+
+```powershell
+cd C:\COFFEESTOCK
+```
+
+```powershell
+venv\Scripts\Activate.ps1
+```
+
+```powershell
+git pull
+```
+
+```powershell
+pip install -r requirements.txt
+```
+
+```powershell
+python manage.py migrate
+```
+
+```powershell
+python manage.py seed_demo_data --reset
+```
+
+El último comando es opcional: borra las ventas, compras e insumos y vuelve a
+cargar los datos de ejemplo (los usuarios no se tocan). Úsalo si quieres ver
+los proveedores, compras y ventas de muestra.
+
+---
+
+## Reportes
+
+Cada reporte sale en el formato que tiene sentido para lo que se hace con él:
+**PDF** para leer, imprimir o firmar; **Excel** para filtrar y hacer cuentas.
+
+| Reporte | Formato | Para qué sirve |
+|---|---|---|
+| Corte de caja | PDF | Cierre del turno o del día, con firmas de cajero y supervisor (menú **Corte de caja**). |
+| Ventas del período | PDF y Excel | PDF: resumen para el dueño (total, ticket promedio, utilidad, ventas por día y producto). Excel: cada producto vendido, línea por línea. |
+| Lista de compras sugerida | PDF | Insumos en o bajo el mínimo y cuánto pedir, para llevar al proveedor. |
+| Rentabilidad por producto | Excel | Costo de receta, precio, margen y utilidad por producto. |
+| Inventario valorizado | Excel | Stock y valor de cada insumo al costo promedio, con columna para el conteo físico. |
+| Mermas del período | Excel | Pérdidas con su costo y causa. |
+| Compras del período | Excel | Compras por proveedor e insumo. |
+
+Además, todas las tablas del sistema tienen su botón **Exportar Excel** con
+los filtros que estén aplicados.
+
+---
+
+## Modo presentación (opcional)
+
+Por defecto el sistema corre en modo desarrollo: si algo falla, muestra el
+error técnico en pantalla. Para una presentación o para usarlo en el negocio,
+agrega al `.env`:
+
+```ini
+DEBUG=False
+SECRET_KEY=escribe-aqui-una-frase-larga-que-nadie-conozca
+ALLOWED_HOSTS=localhost,127.0.0.1
+```
+
+Y corre una vez (y cada vez que actualices el proyecto):
+
+```powershell
+python manage.py collectstatic --noinput
+```
+
+Así se ven las páginas de error de CoffeeStock en lugar de las de Django. Para
+volver al modo desarrollo, borra esas tres líneas.
 
 ---
 
@@ -593,80 +700,65 @@ activa en Docker Desktop **Settings → General → Use Rosetta**.
 ## Para desarrolladores
 
 **Pruebas automáticas:** `python manage.py test`. Crean y borran una base
-temporal; cubren el flujo de alertas y la lectura del `.env`.
+temporal; cubren ventas y anulaciones, compras y costo promedio, alertas,
+listados (filtros, orden, exportación), usuarios, corte de caja, reportes PDF
+y Excel, dashboard y el punto de venta.
 
 **Estructura:**
 
 ```
-coffeestock/           Configuración de Django
-core/                  Modelos, login, roles, alertas (services/alertas.py) y comandos
-pos/                   Punto de venta
-dashboard/             Dashboard, insumos, productos, mermas y ventas
-templates/             HTML (Bootstrap 5, Chart.js)
-scripts/               crear_base_de_datos.sql
+coffeestock/              Configuración de Django y archivos estáticos
+  static/vendor/          Bootstrap, iconos, Chart.js, Flatpickr y fuentes (funciona sin internet)
+core/                     Modelos, login, roles y comandos
+  services/               Lógica del negocio: ventas, compras, corte de caja, alertas
+pos/                      Punto de venta y ticket
+dashboard/                Dashboard, inventario, compras, ventas, usuarios
+  listados.py             Filtros, orden, paginación y exportación de todas las tablas
+  reportes/               Datos, PDF (reportlab) y Excel (openpyxl) de los reportes
+templates/                HTML (Bootstrap 5, Chart.js)
+scripts/                  crear_base_de_datos.sql
 ```
 
-**Otras variables del `.env`:** `TIME_ZONE` (por defecto `America/El_Salvador`; por ejemplo `America/Mexico_City` o `America/Bogota` si el sistema se usa en otro país), `DB_DRIVER` (si tienes un driver ODBC distinto
-al 17/18), `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`. `SENDGRID_ADMIN_EMAIL` de
+**Otras variables del `.env`:** `TIME_ZONE` (por defecto `America/El_Salvador`;
+por ejemplo `America/Mexico_City` o `America/Bogota` si el sistema se usa en
+otro país), `DB_DRIVER` (si tienes un driver ODBC distinto al 17/18),
+`ALERTA_EN_SEGUNDO_PLANO` (`True` por defecto), `CSRF_TRUSTED_ORIGINS` y
+`USAR_HTTPS` (si se publica detrás de HTTPS). `SENDGRID_ADMIN_EMAIL` de
 versiones anteriores se sigue aceptando como destinatario.
 
-**Antes de un uso real** cambia las contraseñas de prueba:
-`python manage.py changepassword admin_coffeestock` y
-`python manage.py changepassword cajero1`.
+**Antes de un uso real** cambia las contraseñas de prueba desde el menú
+**Usuarios** o con `python manage.py changepassword admin_coffeestock`.
 
 ---
 
-## Pendiente para el Avance 2
+## Avance 2: qué se agregó
 
-Lo que queda para la entrega final, agrupado por tema.
+- **Compras y proveedores**: entradas de inventario con factura; el costo del
+  insumo pasa a ser el promedio ponderado.
+- **Ventas**: forma de pago (efectivo con cambio o tarjeta), ticket de 80 mm,
+  anulación con motivo que devuelve el stock, reimpresión del último ticket.
+- **Corte de caja** por día o rango, por cajero, en pantalla y PDF con firmas.
+- **Usuarios** desde el dashboard: crear, editar rol, cambiar contraseña y
+  desactivar.
+- **Reportes** PDF y Excel pensados para una cafetería (ver
+  [Reportes](#reportes)).
+- **Costo de receta y margen** por producto, calculados en vivo.
+- **Dashboard** con período (7 días, 30 días, mes), ticket promedio,
+  comparación con ayer, horas pico e insumos por reponer.
+- **Tablas**: códigos visibles, buscador, filtros, orden por columna,
+  paginación completa con tamaño de página y exportación a Excel.
+- **Diseño**: identidad visual de CoffeeStock en todo el sistema, avisos
+  flotantes, migas de pan, selector de fechas en español, páginas de error
+  propias y login renovado.
+- **Técnico**: alertas por correo en segundo plano, venta con bloqueo de
+  insumos en orden (evita bloqueos cruzados entre cajas), modo producción con
+  `DEBUG=False`, librerías locales (sin depender de internet) y más pruebas
+  automáticas.
 
-### Funcionalidad
+### Ideas para después
 
-- **Entradas de inventario / compras**: hoy el stock solo se sube editando el
-  insumo. Falta un registro de compras con proveedor, fecha, cantidad y costo,
-  que deje historial.
-- **Proveedores**: catálogo básico y relación con los insumos.
-- **Anular ventas / devoluciones** devolviendo el stock descontado.
-- **Corte de caja por turno**: total vendido por cajero y por forma de pago.
-- **Forma de pago y ticket** imprimible o en PDF.
-- **Gestión de usuarios desde el dashboard**, sin depender de `/admin/`.
-- **Reportes exportables** a Excel/PDF (ventas por periodo, mermas, valor del
-  inventario).
-- **Costo y margen por producto** calculado a partir de la receta.
-
-### Alertas
-
-- Enviar el correo en segundo plano (hilo o cola de tareas) para que el POS no
-  espere la respuesta del proveedor de correo.
-- Resumen diario con todos los insumos bajos, en vez de un correo por insumo.
-- Reintentar alertas que fallaron y dejar registro de envíos en la base.
-- Correo con formato HTML y enlace directo al insumo.
-- Configurar los destinatarios desde el dashboard en lugar del `.env`.
-
-### Rendimiento
-
-- En la venta se consultan las recetas producto por producto y cada insumo se
-  bloquea y relee por separado. Se puede traer todo en una sola consulta
-  (`prefetch_related`) y bloquear los insumos de una vez, en orden, lo que
-  además evita posibles bloqueos cruzados entre dos cajas.
-- Cachear los cálculos del dashboard por unos minutos.
-- Revisar índices con datos grandes (por ejemplo `DetalleVenta` por fecha de
-  venta para el top de productos) y medir con muchas ventas cargadas.
-- Pruebas de carga del POS con varios cajeros vendiendo a la vez.
-
-### Diseño y experiencia de uso
-
-- POS pensado para pantalla táctil (botones más grandes, atajos de teclado).
-- Confirmaciones y mensajes más claros cuando falta stock para una venta.
-- Modo oscuro y revisión de accesibilidad (contraste, navegación con teclado).
-- Traducir por completo la interfaz y el admin de Django al español.
-
-### Calidad y despliegue
-
-- Más pruebas automáticas (POS, permisos por rol, dashboard, formularios).
-- Integración continua (GitHub Actions) corriendo las pruebas contra SQL
-  Server en contenedor.
-- Configuración de producción: `DEBUG=False`, una `SECRET_KEY` propia y
-  `ALLOWED_HOSTS` (ya se pueden poner en el `.env`, falta documentarlo y
-  probarlo), HTTPS, un servidor de aplicación en vez de `runserver`, servir
-  estáticos e imágenes, y respaldos de la base de datos.
+- Resumen diario de alertas en un solo correo y registro de envíos.
+- Cierre de caja con conteo de efectivo y diferencia contra lo esperado.
+- Integración continua (GitHub Actions) con SQL Server en contenedor.
+- Servidor de aplicación (por ejemplo Waitress) y respaldos automáticos de la
+  base de datos.
