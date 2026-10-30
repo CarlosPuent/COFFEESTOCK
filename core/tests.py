@@ -19,11 +19,13 @@ from core.services.alertas import enviar_alerta_stock, enviar_correo
 User = get_user_model()
 
 CONSOLA = dict(
+    ALERTA_EN_SEGUNDO_PLANO=False,
     ALERTA_EMAIL_PROVEEDOR='consola',
     ALERTA_EMAIL_DESTINATARIOS=['dueno@ejemplo.com'],
     DEFAULT_FROM_EMAIL='alertas@coffeestock.local',
 )
 SENDGRID = dict(
+    ALERTA_EN_SEGUNDO_PLANO=False,
     ALERTA_EMAIL_PROVEEDOR='sendgrid',
     ALERTA_EMAIL_DESTINATARIOS=['dueno@ejemplo.com'],
     SENDGRID_API_KEY='SG.prueba',
@@ -343,3 +345,18 @@ class PagoYAnulacionTests(TestCase):
         respuesta = self.client.get(reverse('pos:ticket', args=[venta.pk]))
         self.assertContains(respuesta, venta.codigo)
         self.assertContains(respuesta, '$1.50')  # cambio
+
+
+class AlertaEnSegundoPlanoTests(TestCase):
+    @override_settings(**dict(CONSOLA, ALERTA_EN_SEGUNDO_PLANO=True))
+    def test_el_envio_corre_en_un_hilo_aparte(self):
+        from unittest import mock
+
+        from core.services.alertas import programar_alerta_stock
+
+        insumo = crear_insumo()
+        with mock.patch('core.services.alertas.threading.Thread') as hilo:
+            with self.captureOnCommitCallbacks(execute=True):
+                programar_alerta_stock(insumo.pk)
+        hilo.assert_called_once()
+        hilo.return_value.start.assert_called_once()

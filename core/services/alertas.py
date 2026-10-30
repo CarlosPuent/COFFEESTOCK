@@ -10,11 +10,12 @@ sale nunca debe romper una venta o una merma.
 """
 import json
 import logging
+import threading
 from datetime import timedelta
 
 from django.conf import settings
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import close_old_connections, transaction
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -191,7 +192,9 @@ def programar_alerta_stock(insumo_pk):
     """Envía la alerta cuando la transacción actual se confirme.
 
     Así el correo no sale si la venta termina revirtiéndose, y la llamada
-    HTTP no se hace mientras la fila del insumo está bloqueada.
+    HTTP no se hace mientras la fila del insumo está bloqueada. Con
+    ALERTA_EN_SEGUNDO_PLANO el envío corre en un hilo aparte, para que el
+    cajero no espere a SendGrid al confirmar la venta.
     """
     def _enviar():
         from core.models import Insumo
@@ -209,4 +212,17 @@ def programar_alerta_stock(insumo_pk):
         except Exception:
             logger.exception('Error inesperado al enviar la alerta de stock (insumo %s).', insumo_pk)
 
-    transaction.on_commit(_enviar_sin_romper)
+    def _en_segundo_plano():
+        # El hilo abre su propia conexión a la base; se cierra al terminar.
+        try:
+            _enviar_sin_romper()
+        finally:
+            close_old_connections()
+
+    def _despachar():
+        if settings.ALERTA_EN_SEGUNDO_PLANO:
+            threading.Thread(target=_en_segundo_plano, name='alerta-stock', daemon=True).start()
+        else:
+            _enviar_sin_romper()
+
+    transaction.on_commit(_despachar)

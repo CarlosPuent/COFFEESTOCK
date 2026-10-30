@@ -15,6 +15,7 @@ from pathlib import Path
 
 import environ
 from django.contrib.messages import constants as message_constants
+from django.core.exceptions import ImproperlyConfigured
 
 # Usa los certificados del sistema operativo (en Windows, los de Windows) para
 # las conexiones HTTPS/SMTP. Sin esto, un antivirus o una red que inspecciona
@@ -52,16 +53,31 @@ def _leer_env(ruta):
 _leer_env(BASE_DIR / '.env')
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+# Seguridad. Para desarrollo bastan los valores por defecto; en producción
+# el .env debe traer DEBUG=False, una SECRET_KEY propia y ALLOWED_HOSTS.
+# https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-v1da+s@0z3^!wknf8xyn-kxl-&$m9tgjy0mo)bobok@y2hje=_')
-
-# SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[])
+SECRET_KEY = env('SECRET_KEY', default='')
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured('Con DEBUG=False hay que definir SECRET_KEY en el archivo .env.')
+    SECRET_KEY = 'django-insecure-solo-para-desarrollo-local'
+
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=[] if DEBUG else ['localhost', '127.0.0.1'])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+
+if not DEBUG:
+    SESSION_COOKIE_HTTPONLY = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    # Solo si el sitio se publica con HTTPS (detrás de un proxy o similar).
+    if env.bool('USAR_HTTPS', default=False):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+        SECURE_SSL_REDIRECT = True
+        SESSION_COOKIE_SECURE = True
+        CSRF_COOKIE_SECURE = True
 
 
 # Application definition
@@ -93,6 +109,8 @@ MESSAGE_TAGS = {
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Sirve los archivos estáticos también con DEBUG=False.
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -222,6 +240,16 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'coffeestock' / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': (
+            'django.contrib.staticfiles.storage.StaticFilesStorage'
+            if DEBUG
+            else 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+        ),
+    },
+}
 
 # Imágenes de productos subidas desde el dashboard.
 MEDIA_URL = 'media/'
@@ -263,6 +291,9 @@ ALERTA_EMAIL_DESTINATARIOS = [
     )
     if correo.strip()
 ]
+
+# Envía las alertas en un hilo aparte para no demorar la venta.
+ALERTA_EN_SEGUNDO_PLANO = env.bool('ALERTA_EN_SEGUNDO_PLANO', default=True)
 
 # Quién aparece como remitente. En SendGrid DEBE ser el correo verificado
 # como "Sender" en tu cuenta; en SMTP normalmente es tu mismo usuario.
