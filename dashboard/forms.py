@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.forms import formset_factory, inlineformset_factory
 from django.utils import timezone
 
-from core.models import Compra, Insumo, Merma, Producto, Proveedor, RecetaInsumo, Venta
+from core.models import Insumo, Merma, Producto, Proveedor, RecetaInsumo, Venta
 
 from .listados import FiltroForm
 

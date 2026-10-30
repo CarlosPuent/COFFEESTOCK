@@ -1,10 +1,20 @@
 {% extends 'dashboard/dashboard_base.html' %}
+{% load static formato %}
 
-{% load formato %}
-{% block title %}Dashboard - CoffeeStock{% endblock %}
+{% block title %}Inicio - CoffeeStock{% endblock %}
 
 {% block dashboard_content %}
-<h1 class="mb-3"><i class="bi bi-speedometer2 me-2"></i>Dashboard</h1>
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1">Hola, {{ request.user.first_name|default:request.user.username }}</h1>
+    <p class="encabezado-resumen">{% now "l d \d\e F \d\e Y" %} · así va {{ negocio.nombre }}</p>
+  </div>
+  <div class="encabezado-acciones">
+    <a href="{% url 'pos:index' %}" class="btn btn-primary"><i class="bi bi-shop me-1"></i>Nueva venta</a>
+    <a href="{% url 'dashboard:compra_create' %}" class="btn btn-outline-secondary"><i class="bi bi-bag-plus me-1"></i>Registrar compra</a>
+    <a href="{% url 'dashboard:merma_create' %}" class="btn btn-outline-secondary"><i class="bi bi-clipboard2-plus me-1"></i>Registrar merma</a>
+  </div>
+</div>
 
 {% if not estado_correo.listo %}
   <div class="alert alert-warning small">
@@ -15,133 +25,236 @@
   </div>
 {% endif %}
 
-<section class="mb-4">
-  {% if insumos_alerta %}
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-      {% for insumo in insumos_alerta %}
-        <div class="col">
-          <div class="alert alert-danger mb-0 h-100">
-            <div class="fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ insumo.nombre }}</div>
-            <div>Stock actual: {{ insumo.stock_actual|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</div>
-            <div>Stock mínimo: {{ insumo.stock_minimo|cantidad }} {{ insumo.unidad_medida|unidad_corta }}</div>
-            <a href="{% url 'dashboard:compra_create' %}?insumo={{ insumo.pk }}" class="enlace-alerta"><i class="bi bi-bag-plus me-1"></i>Reabastecer</a>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% else %}
-    <div class="alert alert-success mb-0">
-      <i class="bi bi-check-circle-fill me-1"></i> Todo el inventario está en niveles normales.
-    </div>
-  {% endif %}
-</section>
-
-<div class="row row-cols-1 row-cols-lg-2 g-4">
-  <div class="col">
-    <div class="card h-100">
-      <div class="card-body">
-        <h2><i class="bi bi-graph-up-arrow me-1"></i>Ventas de los últimos 7 días</h2>
-        {% if ventas_has_data %}
-          <div class="chart-wrapper"><canvas id="chart-ventas"></canvas></div>
-        {% else %}
-          {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-graph-up" titulo="Sin ventas en el periodo" texto="Aquí verás la evolución de ventas cuando se registren en los últimos 7 días." %}
-        {% endif %}
-      </div>
+<div class="kpi-grid mb-4">
+  <div class="kpi kpi-destacado">
+    <div class="kpi-etiqueta"><i class="bi bi-cash-stack"></i>Ventas de hoy</div>
+    <div class="kpi-valor">{{ kpi.total_hoy|moneda }}</div>
+    <div class="kpi-detalle">
+      {{ kpi.num_hoy }} venta{{ kpi.num_hoy|pluralize }}
+      {% if kpi.variacion_hoy is not None %}
+        · <span class="{% if kpi.variacion_hoy >= 0 %}kpi-sube{% else %}kpi-baja{% endif %}">
+          <i class="bi {% if kpi.variacion_hoy >= 0 %}bi-arrow-up-right{% else %}bi-arrow-down-right{% endif %}"></i>
+          {{ kpi.variacion_hoy|porcentaje }} vs. ayer</span>
+      {% endif %}
     </div>
   </div>
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-receipt"></i>Ticket promedio</div>
+    <div class="kpi-valor">{{ kpi.ticket_hoy|moneda }}</div>
+    <div class="kpi-detalle">Lo que gasta cada cliente hoy</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-calendar3"></i>Ventas del mes</div>
+    <div class="kpi-valor">{{ kpi.total_mes|moneda }}</div>
+    <div class="kpi-detalle">{{ kpi.num_mes }} venta{{ kpi.num_mes|pluralize }}</div>
+  </div>
+  <a class="kpi kpi-enlace" href="{% url 'dashboard:insumo_list' %}?stock=bajo">
+    <div class="kpi-etiqueta"><i class="bi bi-exclamation-triangle"></i>Insumos en alerta</div>
+    <div class="kpi-valor {% if kpi.en_alerta %}texto-negativo{% endif %}">{{ kpi.en_alerta }}</div>
+    <div class="kpi-detalle">{% if kpi.en_alerta %}Ver cuáles reponer <i class="bi bi-arrow-right"></i>{% else %}Todo en niveles normales{% endif %}</div>
+  </a>
+  <div class="kpi">
+    <div class="kpi-etiqueta"><i class="bi bi-box-seam"></i>Valor del inventario</div>
+    <div class="kpi-valor">{{ kpi.valor_inventario|moneda }}</div>
+    <div class="kpi-detalle">Al costo de los insumos</div>
+  </div>
+</div>
 
-  <div class="col">
-    <div class="card h-100">
-      <div class="card-body">
-        <h2><i class="bi bi-bar-chart-fill me-1"></i>Top 5 productos más vendidos (30 días)</h2>
-        {% if productos_has_data %}
-          <div class="chart-wrapper"><canvas id="chart-productos"></canvas></div>
-        {% else %}
-          {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-bar-chart" titulo="Sin productos vendidos" texto="El ranking aparecerá cuando haya ventas en los últimos 30 días." %}
-        {% endif %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="titulo-bloque mb-0">Resumen · {{ periodo_texto }}</h2>
+  <div class="periodos-rapidos">
+    {% for clave, etiqueta in periodos.items %}
+      <a href="?periodo={{ clave }}" class="chip{% if clave == periodo %} chip-activo{% endif %}">{{ etiqueta }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="row g-4 mb-4">
+  <div class="col-xl-8">
+    <div class="panel h-100">
+      <div class="panel-encabezado">
+        <h3 class="panel-titulo">Ventas por día</h3>
+        <span class="panel-dato">{{ total_periodo|moneda }}</span>
       </div>
+      {% if hay_ventas %}
+        <div class="chart-wrapper"><canvas id="chart-ventas" aria-label="Ventas por día"></canvas></div>
+      {% else %}
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-graph-up" titulo="Sin ventas en el período" texto="La gráfica aparecerá cuando haya ventas registradas." %}
+      {% endif %}
     </div>
   </div>
-
-  <div class="col">
-    <div class="card h-100">
-      <div class="card-body">
-        <h2><i class="bi bi-pie-chart-fill me-1"></i>Mermas del mes por causa</h2>
-        {% if mermas_has_data %}
-          <div class="chart-wrapper"><canvas id="chart-mermas"></canvas></div>
-        {% else %}
-          {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-clipboard2-check" titulo="Sin mermas este mes" texto="Buena señal: no se ha dado de baja ningún insumo en el mes en curso." %}
-        {% endif %}
+  <div class="col-xl-4">
+    <div class="panel h-100">
+      <div class="panel-encabezado">
+        <h3 class="panel-titulo">Insumos por reponer</h3>
+        <a href="{% url 'dashboard:reporte' 'lista-compras' 'pdf' %}" target="_blank" rel="noopener" class="panel-enlace">Lista de compras <i class="bi bi-file-earmark-pdf"></i></a>
       </div>
+      {% if insumos_alerta %}
+        <ul class="lista-alertas">
+          {% for insumo in insumos_alerta %}
+            <li>
+              <div>
+                <div class="fw-medium">{{ insumo.nombre }}</div>
+                <div class="celda-secundaria">
+                  {{ insumo.stock_actual|cantidad }} de {{ insumo.stock_minimo|cantidad }} {{ insumo.unidad_medida|unidad_corta }} mínimo
+                </div>
+              </div>
+              <a href="{% url 'dashboard:compra_create' %}?insumo={{ insumo.pk }}" class="btn btn-sm btn-outline-secondary" title="Registrar compra"><i class="bi bi-bag-plus"></i></a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-check2-circle" titulo="Nada que reponer" texto="Todos los insumos están sobre su stock mínimo." %}
+      {% endif %}
     </div>
   </div>
 </div>
 
-{% load static %}<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
+<div class="row g-4 mb-4">
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-encabezado"><h3 class="panel-titulo">Productos que más venden</h3><span class="panel-dato">por importe</span></div>
+      {% if hay_ventas %}
+        <div class="chart-wrapper"><canvas id="chart-productos" aria-label="Productos que más venden"></canvas></div>
+      {% else %}
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-bar-chart" titulo="Sin datos" texto="El ranking aparecerá cuando haya ventas en el período." %}
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="panel h-100">
+      <div class="panel-encabezado"><h3 class="panel-titulo">Horas pico</h3><span class="panel-dato">número de ventas por hora</span></div>
+      {% if hay_ventas %}
+        <div class="chart-wrapper"><canvas id="chart-horas" aria-label="Ventas por hora"></canvas></div>
+      {% else %}
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-clock" titulo="Sin datos" texto="Verás aquí a qué horas se vende más." %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-5">
+    <div class="panel h-100">
+      <div class="panel-encabezado"><h3 class="panel-titulo">Mermas por causa</h3><span class="panel-dato">costo perdido</span></div>
+      {% if hay_mermas %}
+        <div class="chart-wrapper"><canvas id="chart-mermas" aria-label="Mermas por causa"></canvas></div>
+      {% else %}
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-clipboard2-check" titulo="Sin mermas" texto="Buena señal: no se ha dado de baja ningún insumo en el período." %}
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel h-100">
+      <div class="panel-encabezado">
+        <h3 class="panel-titulo">Últimas ventas</h3>
+        <a href="{% url 'dashboard:venta_list' %}" class="panel-enlace">Ver todas <i class="bi bi-arrow-right"></i></a>
+      </div>
+      {% if ultimas_ventas %}
+        <table class="table table-sm align-middle mb-0 tabla-compacta">
+          <tbody>
+            {% for venta in ultimas_ventas %}
+              <tr class="{% if venta.anulada %}fila-anulada{% endif %}">
+                <td class="col-codigo"><a href="{% url 'dashboard:venta_detail' venta.pk %}">{{ venta.codigo }}</a></td>
+                <td>{{ venta.fecha|date:"d/m H:i" }}</td>
+                <td>{{ venta.usuario_cajero.username }}</td>
+                <td><i class="bi {% if venta.metodo_pago == 'tarjeta' %}bi-credit-card{% else %}bi-cash-coin{% endif %} text-muted"></i></td>
+                <td class="col-num fw-medium monto-venta">{{ venta.total|moneda }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        {% include 'partials/_estado_vacio.html' with compacto=1 icono="bi-receipt" titulo="Aún no hay ventas" texto="" %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{{ graficas|json_script:"datos-graficas" }}
+<script src="{% static 'vendor/chartjs/chart.umd.js' %}"></script>
 <script>
 (function () {
-  {% if ventas_has_data %}
-  var ventasData = JSON.parse("{{ ventas_chart_json|escapejs }}");
-  new Chart(document.getElementById('chart-ventas'), {
+  var g = JSON.parse(document.getElementById('datos-graficas').textContent);
+  var TINTA = '#241B15', ACENTO = '#A9793F', SUAVE = '#7A6A5C', BORDE = 'rgba(36,27,21,0.08)';
+  Chart.defaults.font.family = "'Inter', 'Segoe UI', system-ui, sans-serif";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = SUAVE;
+  Chart.defaults.plugins.tooltip.backgroundColor = TINTA;
+  Chart.defaults.plugins.tooltip.padding = 10;
+  Chart.defaults.plugins.tooltip.cornerRadius = 8;
+  Chart.defaults.plugins.legend.display = false;
+  Chart.defaults.maintainAspectRatio = false;
+
+  function dinero(v) {
+    return '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  var ejes = {
+    x: { grid: { display: false }, border: { display: false } },
+    y: { beginAtZero: true, grid: { color: BORDE }, border: { display: false } },
+  };
+
+  function crear(id, config) {
+    var el = document.getElementById(id);
+    if (el) new Chart(el, config);
+  }
+
+  crear('chart-ventas', {
     type: 'line',
     data: {
-      labels: ventasData.labels,
+      labels: g.ventas.labels,
       datasets: [{
-        label: 'Total vendido',
-        data: ventasData.data,
-        borderColor: '#A9793F',
-        backgroundColor: 'rgba(169, 121, 63, 0.15)',
-        tension: 0.3,
-        fill: true,
+        data: g.ventas.data, borderColor: ACENTO, backgroundColor: 'rgba(169,121,63,0.12)',
+        fill: true, cubicInterpolationMode: 'monotone', pointRadius: 3, pointBackgroundColor: ACENTO, borderWidth: 2,
       }],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } },
+      scales: { x: ejes.x, y: Object.assign({}, ejes.y, { ticks: { callback: dinero } }) },
+      plugins: { tooltip: { callbacks: { label: function (c) { return dinero(c.parsed.y); } } } },
     },
   });
-  {% endif %}
 
-  {% if productos_has_data %}
-  var productosData = JSON.parse("{{ productos_chart_json|escapejs }}");
-  new Chart(document.getElementById('chart-productos'), {
+  crear('chart-productos', {
     type: 'bar',
     data: {
-      labels: productosData.labels,
-      datasets: [{
-        label: 'Cantidad vendida',
-        data: productosData.data,
-        backgroundColor: '#A9793F',
-      }],
+      labels: g.productos.labels,
+      datasets: [{ data: g.productos.data, backgroundColor: ACENTO, borderRadius: 6, barThickness: 22 }],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } },
+      indexAxis: 'y',
+      scales: { x: Object.assign({}, ejes.y, { ticks: { callback: dinero, maxRotation: 0, maxTicksLimit: 5 } }), y: ejes.x },
+      plugins: { tooltip: { callbacks: { label: function (c) {
+        return dinero(c.parsed.x) + ' · ' + g.productos.unidades[c.dataIndex] + ' unidades';
+      } } } },
     },
   });
-  {% endif %}
 
-  {% if mermas_has_data %}
-  var mermasData = JSON.parse("{{ mermas_chart_json|escapejs }}");
-  new Chart(document.getElementById('chart-mermas'), {
+  crear('chart-horas', {
+    type: 'bar',
+    data: {
+      labels: g.horas.labels,
+      datasets: [{ data: g.horas.data, backgroundColor: TINTA, borderRadius: 6 }],
+    },
+    options: {
+      scales: { x: ejes.x, y: Object.assign({}, ejes.y, { ticks: { precision: 0 } }) },
+      plugins: { tooltip: { callbacks: { label: function (c) { return c.parsed.y + ' ventas'; } } } },
+    },
+  });
+
+  crear('chart-mermas', {
     type: 'doughnut',
     data: {
-      labels: mermasData.labels,
-      datasets: [{
-        data: mermasData.data,
-        backgroundColor: ['#B54B3A', '#A9793F', '#7A6A5C'],
-      }],
+      labels: g.mermas.labels,
+      datasets: [{ data: g.mermas.data, backgroundColor: ['#B54B3A', ACENTO, SUAVE], borderWidth: 0 }],
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: true, position: 'right', labels: { usePointStyle: true, boxWidth: 8 } },
+        tooltip: { callbacks: { label: function (c) { return c.label + ': ' + dinero(c.parsed); } } },
+      },
     },
   });
-  {% endif %}
 })();
 </script>
 {% endblock %}

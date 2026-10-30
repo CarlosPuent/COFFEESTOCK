@@ -219,3 +219,23 @@ class ReportesTests(TestCase):
         respuesta = self.client.get(reverse('dashboard:reportes'))
         self.assertContains(respuesta, reverse('dashboard:reporte', args=['ventas', 'pdf']))
         self.assertContains(respuesta, reverse('dashboard:reporte', args=['inventario', 'xlsx']))
+
+
+class DashboardTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = User.objects.create_user('admin', password='x')
+        cls.admin.groups.add(Group.objects.create(name='Administrador'))
+        Venta.objects.create(usuario_cajero=cls.admin, total=Decimal('10'))
+        Venta.objects.create(usuario_cajero=cls.admin, total=Decimal('4'), estado='anulada')
+
+    def test_periodos_e_indicadores(self):
+        self.client.force_login(self.admin)
+        for periodo in ('7', '30', 'mes', 'cualquier-cosa'):
+            with self.subTest(periodo=periodo):
+                respuesta = self.client.get(reverse('dashboard:index'), {'periodo': periodo})
+                self.assertEqual(respuesta.status_code, 200)
+                # la venta anulada no cuenta
+                self.assertEqual(respuesta.context['kpi']['total_hoy'], Decimal('10'))
+                self.assertEqual(respuesta.context['kpi']['num_hoy'], 1)
+        self.assertEqual(respuesta.context['periodo'], '7')

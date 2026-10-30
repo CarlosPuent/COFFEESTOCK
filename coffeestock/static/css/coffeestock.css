@@ -1998,3 +1998,93 @@ form .tarjeta-ancha ~ .formulario-acciones {
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+/* ---------- Dashboard ---------- */
+
+.panel {
+  background-color: var(--coffee-card);
+  border: 1px solid var(--coffee-border);
+  border-radius: var(--coffee-radius);
+  padding: 1.15rem 1.25rem;
+}
+.panel-encabezado {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+.panel-titulo {
+  font-size: 1.05rem;
+  margin: 0;
+}
+.panel-dato {
+  font-size: var(--fs-small);
+  color: var(--coffee-text-muted);
+}
+.panel-enlace {
+  font-size: var(--fs-small);
+  font-weight: var(--fw-btn);
+  color: var(--coffee-accent);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.kpi-enlace {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.kpi-enlace:hover {
+  border-color: var(--coffee-accent);
+  box-shadow: var(--coffee-shadow-hover);
+  color: inherit;
+}
+.kpi-sube {
+  color: #9FC59B;
+  font-weight: 600;
+}
+.kpi-baja {
+  color: #F0A898;
+  font-weight: 600;
+}
+.kpi:not(.kpi-destacado) .kpi-sube {
+  color: var(--coffee-success);
+}
+.kpi:not(.kpi-destacado) .kpi-baja {
+  color: var(--coffee-danger);
+}
+.lista-alertas {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.lista-alertas li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--coffee-border);
+}
+.lista-alertas li:last-child {
+  border-bottom: none;
+}
+.lista-alertas li .fw-medium::before {
+  content: '';
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--coffee-danger);
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+.tabla-compacta > tbody > tr > td {
+  padding: 0.55rem 0.4rem;
+  background-color: transparent;
+}
+.tabla-compacta > tbody > tr:last-child > td {
+  border-bottom: none;
+}

@@ -1,14 +1,12 @@
 import datetime
-import json
 
 from django.contrib import messages
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import (
     Case, Count, DecimalField, Exists, ExpressionWrapper, F, OuterRef, ProtectedError,
     Sum, Value, When,
 )
-from django.db.models.functions import Coalesce, TruncDate
+from django.db.models.functions import Coalesce, ExtractHour, TruncDate
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -20,7 +18,7 @@ from django.views.generic import (
 from core.mixins import GroupRequiredMixin
 from core.services.alertas import estado_configuracion
 from core.services.ventas import VentaError, anular_venta
-from core.models import DetalleVenta, Insumo, Merma, Producto, RecetaInsumo, Venta
+from core.models import DetalleVenta, Insumo, Merma, Producto, Venta
 
 from .forms import (
     RECETA_INSUMO_FORMSET_PREFIX,
@@ -63,76 +61,137 @@ def filtrar_por_estado(queryset, estado):
     return queryset
 
 
+PERIODOS_DASHBOARD = {
+    '7': 'Últimos 7 días',
+    '30': 'Últimos 30 días',
+    'mes': 'Este mes',
+}
+
+
+def _variacion(actual, anterior):
+    """Variación porcentual; None si no hay base de comparación."""
+    if not anterior:
+        return None
+    return (actual - anterior) / anterior * 100
+
+
 class DashboardIndexView(GroupRequiredMixin, TemplateView):
     template_name = 'dashboard/index.html'
     allowed_groups = ['Administrador']
 
+    def get_periodo(self):
+        clave = self.request.GET.get('periodo', '7')
+        if clave not in PERIODOS_DASHBOARD:
+            clave = '7'
+        hoy = timezone.localdate()
+        if clave == 'mes':
+            desde = hoy.replace(day=1)
+        else:
+            desde = hoy - datetime.timedelta(days=int(clave) - 1)
+        return clave, desde, hoy
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-
-        context['insumos_alerta'] = Insumo.objects.filter(alerta_pendiente=True).order_by('nombre')
-        context['estado_correo'] = estado_configuracion()
-
         hoy = timezone.localdate()
+        ayer = hoy - datetime.timedelta(days=1)
+        clave, desde, hasta = self.get_periodo()
+        completadas = Venta.objects.completadas()
 
-        # 1. Ventas de los últimos 7 días, agrupadas por día (con días sin venta en 0).
-        inicio_7d = hoy - datetime.timedelta(days=6)
-        inicio_7d_dt = timezone.make_aware(datetime.datetime.combine(inicio_7d, datetime.time.min))
+        def total_y_num(qs):
+            fila = qs.aggregate(total=Coalesce(Sum('total'), Value(0, output_field=DINERO)), num=Count('id'))
+            return fila['total'], fila['num']
 
-        ventas_por_dia = {
-            row['dia']: row['total_dia']
-            for row in (
-                Venta.objects.completadas().filter(fecha__gte=inicio_7d_dt)
-                .annotate(dia=TruncDate('fecha'))
-                .values('dia')
-                .annotate(total_dia=Sum('total'))
-            )
+        def del_dia(fecha):
+            return completadas.filter(fecha__range=(inicio_del_dia(fecha), fin_del_dia(fecha)))
+
+        # --- Indicadores ---
+        total_hoy, num_hoy = total_y_num(del_dia(hoy))
+        total_ayer, _ = total_y_num(del_dia(ayer))
+        total_mes, num_mes = total_y_num(completadas.filter(fecha__gte=inicio_del_dia(hoy.replace(day=1))))
+        insumos = Insumo.objects.all()
+        context['kpi'] = {
+            'total_hoy': total_hoy,
+            'num_hoy': num_hoy,
+            'variacion_hoy': _variacion(total_hoy, total_ayer),
+            'ticket_hoy': total_hoy / num_hoy if num_hoy else 0,
+            'total_mes': total_mes,
+            'num_mes': num_mes,
+            'en_alerta': insumos.filter(activo=True, stock_actual__lte=F('stock_minimo')).count(),
+            'valor_inventario': insumos.aggregate(
+                v=Coalesce(Sum(ExpressionWrapper(F('stock_actual') * F('costo_unitario'), output_field=DINERO)),
+                           Value(0, output_field=DINERO))
+            )['v'],
         }
-        rango_7d = [inicio_7d + datetime.timedelta(days=i) for i in range(7)]
-        ventas_chart = {
-            'labels': [dia.strftime('%d/%m') for dia in rango_7d],
-            'data': [float(ventas_por_dia.get(dia, 0)) for dia in rango_7d],
+
+        context['insumos_alerta'] = Insumo.objects.filter(
+            activo=True, stock_actual__lte=F('stock_minimo'),
+        ).order_by('nombre')
+        context['estado_correo'] = estado_configuracion()
+        context['ultimas_ventas'] = Venta.objects.select_related('usuario_cajero').order_by('-fecha')[:6]
+        context['periodo'] = clave
+        context['periodos'] = PERIODOS_DASHBOARD
+        context['periodo_texto'] = PERIODOS_DASHBOARD[clave]
+
+        en_periodo = completadas.filter(fecha__range=(inicio_del_dia(desde), fin_del_dia(hasta)))
+
+        # --- Ventas por día del período (días sin ventas en 0) ---
+        por_dia = {
+            fila['dia']: fila['monto']
+            for fila in en_periodo.annotate(dia=TruncDate('fecha')).values('dia').annotate(monto=Sum('total'))
         }
-        context['ventas_has_data'] = bool(ventas_por_dia)
-        context['ventas_chart_json'] = json.dumps(ventas_chart, cls=DjangoJSONEncoder)
+        dias = [desde + datetime.timedelta(days=i) for i in range((hasta - desde).days + 1)]
+        graficas = {
+            'ventas': {
+                'labels': [d.strftime('%d/%m') for d in dias],
+                'data': [float(por_dia.get(d, 0)) for d in dias],
+            },
+        }
 
-        # 2. Top 5 productos más vendidos en los últimos 30 días.
-        inicio_30d = hoy - datetime.timedelta(days=29)
-        inicio_30d_dt = timezone.make_aware(datetime.datetime.combine(inicio_30d, datetime.time.min))
-
-        top_productos = list(
-            DetalleVenta.objects.filter(
-                venta__fecha__gte=inicio_30d_dt, venta__estado=Venta.Estado.COMPLETADA,
-            )
+        # --- Top 5 productos por importe ---
+        top = list(
+            DetalleVenta.objects.filter(venta__in=en_periodo)
             .values('producto__nombre')
-            .annotate(cantidad_total=Sum('cantidad'))
-            .order_by('-cantidad_total')[:5]
+            .annotate(importe=Sum('subtotal'), unidades=Sum('cantidad'))
+            .order_by('-importe')[:5]
         )
-        productos_chart = {
-            'labels': [row['producto__nombre'] for row in top_productos],
-            'data': [float(row['cantidad_total']) for row in top_productos],
+        graficas['productos'] = {
+            'labels': [f['producto__nombre'] for f in top],
+            'data': [float(f['importe']) for f in top],
+            'unidades': [float(f['unidades']) for f in top],
         }
-        context['productos_has_data'] = bool(top_productos)
-        context['productos_chart_json'] = json.dumps(productos_chart, cls=DjangoJSONEncoder)
 
-        # 3. Mermas del mes actual agrupadas por causa.
-        inicio_mes = hoy.replace(day=1)
-        inicio_mes_dt = timezone.make_aware(datetime.datetime.combine(inicio_mes, datetime.time.min))
+        # --- Horas pico ---
+        por_hora = {
+            f['hora']: f
+            for f in en_periodo.annotate(hora=ExtractHour('fecha')).values('hora')
+            .annotate(num=Count('id'), monto=Sum('total'))
+        }
+        if por_hora:
+            horas = list(range(min(por_hora), max(por_hora) + 1))
+        else:
+            horas = []
+        graficas['horas'] = {
+            'labels': [f'{h:02d}:00' for h in horas],
+            'data': [por_hora[h]['num'] if h in por_hora else 0 for h in horas],
+        }
 
-        causa_display = dict(Merma.Causa.choices)
-        mermas_por_causa = list(
-            Merma.objects.filter(fecha__gte=inicio_mes_dt)
+        # --- Mermas del período por causa (en dinero: las cantidades mezclan unidades) ---
+        causas = dict(Merma.Causa.choices)
+        mermas = list(
+            Merma.objects.filter(fecha__range=(inicio_del_dia(desde), fin_del_dia(hasta)))
             .values('causa')
-            .annotate(cantidad_total=Sum('cantidad'))
-            .order_by('causa')
+            .annotate(costo=Sum(ExpressionWrapper(F('cantidad') * F('insumo__costo_unitario'), output_field=DINERO)))
+            .order_by('-costo')
         )
-        mermas_chart = {
-            'labels': [causa_display.get(row['causa'], row['causa']) for row in mermas_por_causa],
-            'data': [float(row['cantidad_total']) for row in mermas_por_causa],
+        graficas['mermas'] = {
+            'labels': [causas.get(f['causa'], f['causa']) for f in mermas],
+            'data': [round(float(f['costo']), 2) for f in mermas],
         }
-        context['mermas_has_data'] = bool(mermas_por_causa)
-        context['mermas_chart_json'] = json.dumps(mermas_chart, cls=DjangoJSONEncoder)
 
+        context['graficas'] = graficas
+        context['hay_ventas'] = bool(por_dia)
+        context['hay_mermas'] = bool(mermas)
+        context['total_periodo'] = sum(por_dia.values(), 0)
         return context
 
 
