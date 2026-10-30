@@ -1,98 +1,177 @@
 {% extends 'dashboard/dashboard_base.html' %}
-{% load crispy_forms_tags %}
+{% load crispy_forms_tags formato %}
 
 {% block title %}{% if object %}Editar producto{% else %}Nuevo producto{% endif %} - CoffeeStock{% endblock %}
 
+{% block migas %}<a href="{% url 'dashboard:producto_list' %}">Productos</a><span>{% if object %}{{ object.nombre }}{% else %}Nuevo{% endif %}</span>{% endblock %}
+
 {% block dashboard_content %}
-<h1 class="mb-3"><i class="bi bi-cup-hot me-2"></i>{% if object %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+<div class="encabezado-pagina">
+  <div>
+    <h1 class="mb-1"><i class="bi bi-cup-hot me-2"></i>{% if object %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+    <p class="encabezado-resumen">{% if object %}<span class="col-codigo">{{ object.codigo }}</span> · {% endif %}Lo que vendes en el punto de venta. La receta define qué insumos descuenta cada venta.</p>
+  </div>
+</div>
 
-<form method="post" enctype="multipart/form-data">
+<form method="post" enctype="multipart/form-data" novalidate>
   {% csrf_token %}
-  {{ form|crispy }}
+  <div class="row g-4">
+    <div class="col-xl-5">
+      <div class="tarjeta-formulario tarjeta-ancha h-100">
+        <h2 class="titulo-bloque">Datos del producto</h2>
+        {{ form.nombre|as_crispy_field }}
+        <div class="row g-3">
+          <div class="col-sm-6">{{ form.categoria|as_crispy_field }}</div>
+          <div class="col-sm-6">{{ form.precio_venta|as_crispy_field }}</div>
+        </div>
+        {{ form.activo|as_crispy_field }}
+        {% if object.imagen %}
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <img src="{{ object.imagen.url }}" alt="" class="miniatura">
+            <span class="celda-secundaria">Imagen actual</span>
+          </div>
+        {% endif %}
+        {{ form.imagen|as_crispy_field }}
+      </div>
+    </div>
 
-  <h2 class="mt-4"><i class="bi bi-journal-text me-1"></i>Receta (insumos requeridos)</h2>
-  {{ receta_formset.management_form }}
+    <div class="col-xl-7">
+      <div class="tarjeta-formulario tarjeta-ancha h-100">
+        <h2 class="titulo-bloque">Receta <span class="encabezado-resumen fw-normal">· insumos para preparar una unidad</span></h2>
+        {{ receta_formset.management_form }}
+        {% if receta_formset.non_form_errors %}
+          <div class="alert alert-danger">{{ receta_formset.non_form_errors }}</div>
+        {% endif %}
 
-  {% if receta_formset.non_form_errors %}
-    <div class="alert alert-danger">{{ receta_formset.non_form_errors }}</div>
-  {% endif %}
+        <div class="table-responsive">
+          <table class="table align-middle tabla-lineas mb-0">
+            <thead>
+              <tr>
+                <th>Insumo</th>
+                <th style="width: 170px;">Cantidad</th>
+                <th class="text-end">Costo</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="receta-formset-body">
+              {% for receta_form in receta_formset %}
+                <tr class="receta-form-row">
+                  {% for hidden in receta_form.hidden_fields %}{{ hidden }}{% endfor %}
+                  <td>{{ receta_form.insumo }}{% for e in receta_form.insumo.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}</td>
+                  <td>
+                    <div class="input-group input-group-sm">{{ receta_form.cantidad_requerida }}<span class="input-group-text unidad-linea">—</span></div>
+                    {% for e in receta_form.cantidad_requerida.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+                  </td>
+                  <td class="col-num costo-linea">—</td>
+                  <td class="text-end">
+                    {% if receta_form.instance.pk %}
+                      <label class="btn btn-sm btn-outline-danger mb-0 quitar-existente" title="Quitar de la receta">
+                        {{ receta_form.DELETE }}<i class="bi bi-trash3"></i>
+                      </label>
+                    {% else %}
+                      <button type="button" class="btn btn-sm btn-outline-danger remove-receta-row" title="Quitar"><i class="bi bi-x-lg"></i></button>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
 
-  <div class="table-responsive">
-    <table class="table table-sm align-middle" id="receta-formset-table">
-      <thead>
-        <tr>
-          <th>Insumo</th>
-          <th>Cantidad requerida</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="receta-formset-body">
-        {% for receta_form in receta_formset %}
-          <tr class="receta-form-row">
-            {% for hidden in receta_form.hidden_fields %}{{ hidden }}{% endfor %}
-            <td>
-              {{ receta_form.insumo }}
-              {{ receta_form.insumo.errors }}
-            </td>
-            <td>
-              {{ receta_form.cantidad_requerida }}
-              {{ receta_form.cantidad_requerida.errors }}
-            </td>
-            <td>
-              {% if receta_form.instance.pk %}
-                <div class="form-check">
-                  {{ receta_form.DELETE }}
-                  <label class="form-check-label">Eliminar</label>
-                </div>
-              {% else %}
-                <button type="button" class="btn btn-sm btn-outline-danger remove-receta-row"><i class="bi bi-x-lg"></i> Quitar</button>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        <button type="button" id="add-receta-row" class="btn btn-sm btn-outline-secondary mt-3">
+          <i class="bi bi-plus-lg me-1"></i>Agregar insumo
+        </button>
+
+        <div class="resumen-receta">
+          <div><span>Costo de la receta</span><strong id="costo-receta">$0.00</strong></div>
+          <div><span>Precio de venta</span><strong id="precio-receta">$0.00</strong></div>
+          <div><span>Ganancia por unidad</span><strong id="ganancia-receta">$0.00</strong></div>
+          <div><span>Margen</span><strong id="margen-receta">—</strong></div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <button type="button" id="add-receta-row" class="btn btn-sm btn-outline-secondary mb-3">
-    <i class="bi bi-plus-lg me-1"></i>Agregar insumo a la receta
-  </button>
-
-  <div>
-    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar</button>
+  <div class="formulario-acciones" style="max-width: none;">
     <a href="{% url 'dashboard:producto_list' %}" class="btn btn-outline-secondary"><i class="bi bi-x-lg me-1"></i>Cancelar</a>
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg me-1"></i>Guardar producto</button>
   </div>
 </form>
 
 <template id="receta-empty-form-template">
   <tr class="receta-form-row">
     <td>{{ receta_formset.empty_form.insumo }}</td>
-    <td>{{ receta_formset.empty_form.cantidad_requerida }}</td>
-    <td><button type="button" class="btn btn-sm btn-outline-danger remove-receta-row">Quitar</button></td>
+    <td><div class="input-group input-group-sm">{{ receta_formset.empty_form.cantidad_requerida }}<span class="input-group-text unidad-linea">—</span></div></td>
+    <td class="col-num costo-linea">—</td>
+    <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger remove-receta-row" title="Quitar"><i class="bi bi-x-lg"></i></button></td>
   </tr>
 </template>
 
+{{ insumos_info|json_script:"insumos-info" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-  var addButton = document.getElementById('add-receta-row');
-  var formsetBody = document.getElementById('receta-formset-body');
-  var totalFormsInput = document.querySelector('#id_receta_insumos-TOTAL_FORMS');
-  var emptyFormTemplate = document.getElementById('receta-empty-form-template');
+  var info = JSON.parse(document.getElementById('insumos-info').textContent);
+  var unidades = { g: 'g', ml: 'ml', unidad: 'u' };
+  var cuerpo = document.getElementById('receta-formset-body');
+  var totalForms = document.querySelector('#id_receta_insumos-TOTAL_FORMS');
+  var plantilla = document.getElementById('receta-empty-form-template');
+  var precioInput = document.getElementById('id_precio_venta');
 
-  addButton.addEventListener('click', function () {
-    var formIndex = parseInt(totalFormsInput.value, 10);
-    var newRowHtml = emptyFormTemplate.innerHTML.replace(/__prefix__/g, formIndex);
-    var tempTbody = document.createElement('tbody');
-    tempTbody.innerHTML = newRowHtml.trim();
-    formsetBody.appendChild(tempTbody.firstElementChild);
-    totalFormsInput.value = formIndex + 1;
+  function dinero(v, dec) {
+    return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: dec || 2 });
+  }
+
+  function recalcular() {
+    var costo = 0;
+    cuerpo.querySelectorAll('tr.receta-form-row').forEach(function (fila) {
+      var borrar = fila.querySelector('input[name$="-DELETE"]');
+      var quitada = borrar && borrar.checked;
+      fila.classList.toggle('fila-quitada', !!quitada);
+      var insumo = info[fila.querySelector('select').value];
+      var cantidad = parseFloat(fila.querySelector('input[name$="-cantidad_requerida"]').value) || 0;
+      fila.querySelector('.unidad-linea').textContent = insumo ? unidades[insumo.unidad] : '—';
+      var linea = insumo ? cantidad * parseFloat(insumo.costo) : 0;
+      fila.querySelector('.costo-linea').textContent = insumo && cantidad ? dinero(linea, 4) : '—';
+      if (!quitada) costo += linea;
+    });
+    var precio = parseFloat(precioInput.value) || 0;
+    var ganancia = precio - costo;
+    document.getElementById('costo-receta').textContent = dinero(costo, 4);
+    document.getElementById('precio-receta').textContent = dinero(precio);
+    var gananciaEl = document.getElementById('ganancia-receta');
+    gananciaEl.textContent = dinero(ganancia);
+    gananciaEl.classList.toggle('texto-negativo', ganancia < 0);
+    var margenEl = document.getElementById('margen-receta');
+    if (precio > 0) {
+      var margen = ganancia / precio * 100;
+      margenEl.textContent = margen.toFixed(1) + ' %';
+      margenEl.className = margen < 30 ? 'texto-negativo' : 'texto-positivo';
+    } else {
+      margenEl.textContent = '—';
+      margenEl.className = '';
+    }
+  }
+
+  document.getElementById('add-receta-row').addEventListener('click', function () {
+    var indice = parseInt(totalForms.value, 10);
+    var temporal = document.createElement('tbody');
+    temporal.innerHTML = plantilla.innerHTML.replace(/__prefix__/g, indice).trim();
+    cuerpo.appendChild(temporal.firstElementChild);
+    totalForms.value = indice + 1;
+    cuerpo.lastElementChild.querySelector('select').focus();
   });
 
-  formsetBody.addEventListener('click', function (event) {
-    if (event.target.classList.contains('remove-receta-row')) {
-      event.target.closest('tr').remove();
+  cuerpo.addEventListener('click', function (e) {
+    var boton = e.target.closest('.remove-receta-row');
+    if (boton) {
+      boton.closest('tr').remove();
+      recalcular();
     }
   });
+  cuerpo.addEventListener('input', recalcular);
+  cuerpo.addEventListener('change', recalcular);
+  precioInput.addEventListener('input', recalcular);
+  recalcular();
 });
 </script>
 {% endblock %}

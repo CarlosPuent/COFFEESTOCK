@@ -25,6 +25,15 @@
       >
         <i class="bi bi-cash-stack me-1"></i>Mi corte
       </a>
+      <a
+        href="{% url 'pos:ultimo_ticket' %}"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-sm btn-outline-light"
+        title="Reimprimir el ticket de tu última venta"
+      >
+        <i class="bi bi-printer me-1"></i>Último ticket
+      </a>
       {% if is_administrador %}
       <a
         href="{% url 'dashboard:index' %}"

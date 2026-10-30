@@ -3,6 +3,8 @@
 
 {% block title %}Venta {{ venta.codigo }} - CoffeeStock{% endblock %}
 
+{% block migas %}<a href="{% url 'dashboard:venta_list' %}">Ventas</a><span>{{ venta.codigo }}</span>{% endblock %}
+
 {% block dashboard_content %}
 <div class="encabezado-pagina">
   <div>

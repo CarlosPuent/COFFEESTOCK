@@ -18,6 +18,7 @@ from django.views.generic import (
 from core.mixins import GroupRequiredMixin
 from core.services.alertas import estado_configuracion
 from core.services.ventas import VentaError, anular_venta
+from core.templatetags.formato import cantidad, unidad_corta
 from core.models import DetalleVenta, Insumo, Merma, Producto, Venta
 
 from .forms import (
@@ -51,6 +52,15 @@ def filtrar_por_fechas(queryset, datos, campo='fecha'):
     if datos.get('fecha_hasta'):
         queryset = queryset.filter(**{f'{campo}__lte': fin_del_dia(datos['fecha_hasta'])})
     return queryset
+
+
+def insumos_info():
+    """Unidad y costo de cada insumo activo, para los cálculos en vivo de
+    los formularios (receta, compra, merma)."""
+    return {
+        str(i.pk): {'unidad': i.unidad_medida, 'costo': str(i.costo_unitario), 'stock': str(i.stock_actual)}
+        for i in Insumo.objects.filter(activo=True)
+    }
 
 
 def filtrar_por_estado(queryset, estado):
@@ -200,19 +210,21 @@ class ProtectedDeleteMixin:
 
     protected_error_message = (
         'No se puede eliminar "{object}" porque tiene registros relacionados '
-        '(recetas o mermas). Desactívalo en lugar de eliminarlo.'
+        '(recetas, compras, ventas o mermas). Desactívalo en lugar de eliminarlo.'
     )
 
     def form_valid(self, form):
-        object_display = str(self.object)
+        object_display = getattr(self.object, 'nombre', str(self.object))
         try:
-            return super().form_valid(form)
+            respuesta = super().form_valid(form)
         except ProtectedError:
             messages.error(
                 self.request,
                 self.protected_error_message.format(object=object_display),
             )
             return redirect(self.success_url)
+        messages.success(self.request, f'"{object_display}" eliminado.')
+        return respuesta
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +295,7 @@ class InsumoFormMixin:
         with transaction.atomic():
             response = super().form_valid(form)
             self.object.sincronizar_alerta()
+        messages.success(self.request, f'Insumo "{self.object.nombre}" guardado.')
         return response
 
 
@@ -296,7 +309,7 @@ class InsumoUpdateView(InsumoFormMixin, GroupRequiredMixin, UpdateView):
 
 class InsumoDeleteView(GroupRequiredMixin, ProtectedDeleteMixin, DeleteView):
     model = Insumo
-    template_name = 'dashboard/insumo_confirm_delete.html'
+    template_name = 'dashboard/confirmar_eliminar.html'
     success_url = reverse_lazy('dashboard:insumo_list')
     allowed_groups = ['Administrador']
 
@@ -385,15 +398,18 @@ class ProductoFormsetMixin:
             context['receta_formset'] = RecetaInsumoFormSet(
                 instance=self.object, prefix=RECETA_INSUMO_FORMSET_PREFIX
             )
+        context['insumos_info'] = insumos_info()
         return context
 
     def form_valid(self, form):
         context = self.get_context_data()
         receta_formset = context['receta_formset']
         if receta_formset.is_valid():
-            self.object = form.save()
-            receta_formset.instance = self.object
-            receta_formset.save()
+            with transaction.atomic():
+                self.object = form.save()
+                receta_formset.instance = self.object
+                receta_formset.save()
+            messages.success(self.request, f'Producto "{self.object.nombre}" guardado.')
             return redirect(self.get_success_url())
         return self.render_to_response(self.get_context_data(form=form))
 
@@ -408,7 +424,7 @@ class ProductoUpdateView(ProductoFormsetMixin, GroupRequiredMixin, UpdateView):
 
 class ProductoDeleteView(GroupRequiredMixin, ProtectedDeleteMixin, DeleteView):
     model = Producto
-    template_name = 'dashboard/producto_confirm_delete.html'
+    template_name = 'dashboard/confirmar_eliminar.html'
     success_url = reverse_lazy('dashboard:producto_list')
     allowed_groups = ['Administrador']
 
@@ -437,9 +453,15 @@ class MermaCreateView(GroupRequiredMixin, CreateView):
 
         messages.success(
             self.request,
-            f'Merma registrada correctamente: {merma.cantidad} de "{merma.insumo}".',
+            f'Merma {merma.codigo} registrada: {cantidad(merma.cantidad)} '
+            f'{unidad_corta(merma.insumo.unidad_medida)} de {merma.insumo.nombre}.',
         )
         return redirect(self.get_success_url())
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['insumos_info'] = insumos_info()
+        return context
 
     def get_success_url(self):
         if self.request.user.groups.filter(name='Administrador').exists():

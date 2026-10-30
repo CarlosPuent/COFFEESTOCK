@@ -3,16 +3,50 @@
 
 {% block title %}Registrar merma - CoffeeStock{% endblock %}
 
-{% block dashboard_content %}
-<h1 class="mb-3"><i class="bi bi-clipboard2-plus me-2"></i>Registrar merma</h1>
+{% block migas %}{% if is_administrador %}<a href="{% url 'dashboard:merma_list' %}">Mermas</a><span>Registrar</span>{% endif %}{% endblock %}
 
-<div style="max-width: 500px;">
-  <form method="post">
+{% block dashboard_content %}
+<div class="tarjeta-formulario" style="max-width: 560px;">
+  <h1 class="mb-1"><i class="bi bi-clipboard2-plus me-2"></i>Registrar merma</h1>
+  <p class="encabezado-resumen mb-3">Insumo que se pierde (vencido, derramado, mal preparado). Se descuenta del stock al instante.</p>
+
+  <form method="post" novalidate>
     {% csrf_token %}
-    {{ form|crispy }}
-    <button type="submit" class="btn btn-primary btn-lg w-100">
+    {{ form.insumo|as_crispy_field }}
+    <div class="row g-3">
+      <div class="col-sm-6">
+        <label class="form-label" for="{{ form.cantidad.id_for_label }}">Cantidad*</label>
+        <div class="input-group">
+          {{ form.cantidad }}
+          <span class="input-group-text" id="unidad-merma">—</span>
+        </div>
+        {% for e in form.cantidad.errors %}<div class="text-danger small mt-1">{{ e }}</div>{% endfor %}
+        <div class="form-text" id="disponible-merma"></div>
+      </div>
+      <div class="col-sm-6">{{ form.causa|as_crispy_field }}</div>
+    </div>
+    {{ form.observacion|as_crispy_field }}
+    <button type="submit" class="btn btn-primary btn-lg w-100 mt-2">
       <i class="bi bi-check-lg me-1"></i>Registrar merma
     </button>
   </form>
 </div>
+
+{{ insumos_info|json_script:"insumos-info" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var info = JSON.parse(document.getElementById('insumos-info').textContent);
+  var unidades = { g: 'g', ml: 'ml', unidad: 'u' };
+  var select = document.getElementById('{{ form.insumo.id_for_label }}');
+  function actualizar() {
+    var insumo = info[select.value];
+    document.getElementById('unidad-merma').textContent = insumo ? unidades[insumo.unidad] : '—';
+    document.getElementById('disponible-merma').textContent = insumo
+      ? 'Disponible: ' + Number(insumo.stock).toLocaleString('en-US', { maximumFractionDigits: 2 }) + ' ' + unidades[insumo.unidad]
+      : '';
+  }
+  select.addEventListener('change', actualizar);
+  actualizar();
+});
+</script>
 {% endblock %}

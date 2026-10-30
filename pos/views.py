@@ -1,6 +1,8 @@
 import json
 
+from django.contrib import messages
 from django.http import JsonResponse
+from django.shortcuts import redirect
 from django.urls import reverse
 from django.views import View
 from django.views.generic import DetailView, TemplateView
@@ -63,3 +65,16 @@ class TicketView(GroupRequiredMixin, DetailView):
 
     def get_queryset(self):
         return Venta.objects.select_related('usuario_cajero').prefetch_related('detalles__producto')
+
+
+class UltimoTicketView(GroupRequiredMixin, View):
+    """Reimprime el ticket de la última venta que registró el usuario."""
+
+    allowed_groups = ['Cajero', 'Administrador']
+
+    def get(self, request):
+        venta = Venta.objects.filter(usuario_cajero=request.user).order_by('-fecha').first()
+        if venta is None:
+            messages.info(request, 'Todavía no has registrado ventas.')
+            return redirect('pos:index')
+        return redirect('pos:ticket', pk=venta.pk)

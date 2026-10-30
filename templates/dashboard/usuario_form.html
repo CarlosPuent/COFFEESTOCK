@@ -3,6 +3,8 @@
 
 {% block title %}{% if object %}Editar usuario{% else %}Nuevo usuario{% endif %} - CoffeeStock{% endblock %}
 
+{% block migas %}<a href="{% url 'dashboard:usuario_list' %}">Usuarios</a><span>{% if object %}{{ object.username }}{% else %}Nuevo{% endif %}</span>{% endblock %}
+
 {% block dashboard_content %}
 <div class="tarjeta-formulario">
   <h1 class="mb-1"><i class="bi bi-person me-2"></i>{% if object %}Editar usuario{% else %}Nuevo usuario{% endif %}</h1>

@@ -46,6 +46,23 @@ class InsumoForm(forms.ModelForm):
             'nombre', 'unidad_medida', 'stock_actual', 'stock_minimo',
             'costo_unitario', 'activo',
         ]
+        labels = {
+            'unidad_medida': 'Unidad de medida',
+            'stock_actual': 'Stock actual',
+            'stock_minimo': 'Stock mínimo',
+            'costo_unitario': 'Costo unitario',
+            'activo': 'Activo (se puede usar en recetas y compras)',
+        }
+        help_texts = {
+            'stock_minimo': 'Al llegar a esta cantidad se genera la alerta de stock bajo.',
+            'costo_unitario': 'Costo de 1 g, 1 ml o 1 unidad. Las compras lo actualizan solas.',
+            'stock_actual': 'Para sumar mercadería, mejor registra una compra: deja historial.',
+        }
+        widgets = {
+            'stock_actual': forms.NumberInput(attrs={'step': '0.01'}),
+            'stock_minimo': forms.NumberInput(attrs={'step': '0.01'}),
+            'costo_unitario': forms.NumberInput(attrs={'step': '0.0001'}),
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -56,6 +73,13 @@ class ProductoForm(forms.ModelForm):
     class Meta:
         model = Producto
         fields = ['nombre', 'categoria', 'precio_venta', 'activo', 'imagen']
+        labels = {
+            'categoria': 'Categoría',
+            'precio_venta': 'Precio de venta',
+            'activo': 'Activo (aparece en el punto de venta)',
+            'imagen': 'Imagen (opcional)',
+        }
+        widgets = {'precio_venta': forms.NumberInput(attrs={'step': '0.01'})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -66,8 +90,10 @@ class MermaForm(forms.ModelForm):
     class Meta:
         model = Merma
         fields = ['insumo', 'cantidad', 'causa', 'observacion']
+        labels = {'observacion': 'Observación (opcional)'}
         widgets = {
-            'observacion': forms.Textarea(attrs={'rows': 3}),
+            'observacion': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Ej.: leche vencida encontrada en el refrigerador'}),
+            'cantidad': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
         }
 
     def __init__(self, *args, **kwargs):

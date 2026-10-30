@@ -10,8 +10,14 @@
     <i class="bi bi-cup-hot login-brand-icon"></i>
     <div class="login-brand-title">CoffeeStock</div>
     <p class="login-brand-tagline">
-      Sistema de gestión para cafeterías: inventario, punto de venta y control de mermas en un solo lugar.
+      Gestión completa para cafeterías, del mostrador a la bodega.
     </p>
+    <ul class="login-funciones">
+      <li><i class="bi bi-shop"></i>Punto de venta con cobro en efectivo o tarjeta y ticket</li>
+      <li><i class="bi bi-box-seam"></i>Inventario con recetas, compras a proveedores y mermas</li>
+      <li><i class="bi bi-envelope-exclamation"></i>Alertas de stock bajo por correo</li>
+      <li><i class="bi bi-bar-chart-line"></i>Corte de caja y reportes en PDF y Excel</li>
+    </ul>
   </aside>
 
   <!-- Columna del formulario -->
@@ -28,12 +34,6 @@
       <h1 class="login-heading">Iniciar sesión</h1>
       <p class="login-subheading">Ingresa tus credenciales para continuar.</p>
 
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-
       {% if form.errors %}
         <div class="alert alert-danger">
           <i class="bi bi-exclamation-triangle-fill me-1"></i> Usuario o contraseña incorrectos.
@@ -42,7 +42,8 @@
 
       <form method="post">
         {% csrf_token %}
-        {{ form|crispy }}
+        {{ form.username|as_crispy_field }}
+        {{ form.password|as_crispy_field }}
         <button type="submit" class="btn btn-primary w-100 mt-3">
           <i class="bi bi-box-arrow-in-right me-1"></i> Ingresar
         </button>

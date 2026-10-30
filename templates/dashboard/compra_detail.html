@@ -3,6 +3,8 @@
 
 {% block title %}Compra {{ compra.codigo }} - CoffeeStock{% endblock %}
 
+{% block migas %}<a href="{% url 'dashboard:compra_list' %}">Compras</a><span>{{ compra.codigo }}</span>{% endblock %}
+
 {% block dashboard_content %}
 <div class="encabezado-pagina">
   <div>

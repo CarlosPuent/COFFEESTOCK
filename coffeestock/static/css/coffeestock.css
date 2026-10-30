@@ -2088,3 +2088,211 @@ form .tarjeta-ancha ~ .formulario-acciones {
 .tabla-compacta > tbody > tr:last-child > td {
   border-bottom: none;
 }
+
+/* ---------- Avisos flotantes ---------- */
+
+.avisos {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1090;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: min(380px, calc(100vw - 2rem));
+}
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.75rem;
+  background-color: var(--coffee-ink);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(36, 27, 21, 0.25);
+  font-size: var(--fs-small);
+  line-height: 1.45;
+  animation: coffee-toast-in 0.22s ease-out;
+}
+.aviso.saliendo {
+  animation: coffee-toast-out 0.22s ease-in forwards;
+}
+.aviso-icono {
+  font-size: 1.05rem;
+  margin-top: 0.05rem;
+}
+.aviso-success .aviso-icono { color: #9FC59B; }
+.aviso-danger { background-color: #8E3A2D; }
+.aviso-danger .aviso-icono { color: #FFD3C9; }
+.aviso-warning .aviso-icono { color: #E8C48F; }
+.aviso-texto {
+  flex: 1;
+}
+.aviso-cerrar {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 0;
+  line-height: 1;
+}
+.aviso-cerrar:hover {
+  color: #fff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .aviso, .aviso.saliendo { animation: none; }
+}
+
+/* ---------- Migas de pan ---------- */
+
+.migas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--fs-small);
+  color: var(--coffee-text-muted);
+  margin-bottom: 0.6rem;
+}
+.migas:empty {
+  display: none;
+}
+.migas a {
+  color: var(--coffee-text-muted);
+  text-decoration: none;
+}
+.migas a:hover {
+  color: var(--coffee-accent);
+}
+.migas a::after {
+  content: '›';
+  margin-left: 0.4rem;
+  color: rgba(36, 27, 21, 0.3);
+}
+.migas span {
+  color: var(--coffee-text);
+  font-weight: var(--fw-label);
+}
+
+/* ---------- Formularios: detalles ---------- */
+
+.ficha-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
+  font-size: var(--fs-small);
+  color: var(--coffee-text-muted);
+}
+.ficha-mini strong {
+  color: var(--coffee-text);
+}
+.formulario-acciones .me-auto {
+  margin-right: auto;
+}
+.resumen-receta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  background-color: var(--coffee-bg);
+}
+.resumen-receta span {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: var(--fw-label);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--coffee-text-muted);
+}
+.resumen-receta strong {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+.fila-quitada td {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.quitar-existente input {
+  display: none;
+}
+.quitar-existente:has(input:checked) {
+  background-color: var(--coffee-danger) !important;
+  color: #fff !important;
+}
+.form-check-input:checked {
+  background-color: var(--coffee-accent);
+  border-color: var(--coffee-accent);
+}
+.form-check-input:focus {
+  border-color: var(--coffee-accent);
+  box-shadow: 0 0 0 0.2rem rgba(169, 121, 63, 0.2);
+}
+@media (min-width: 576px) {
+  .resumen-receta {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+/* ---------- Páginas de error ---------- */
+
+.pagina-error {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.pagina-error-tarjeta {
+  background-color: var(--coffee-card);
+  border: 1px solid var(--coffee-border);
+  border-radius: var(--coffee-radius);
+  padding: 2.75rem 2.25rem;
+  max-width: 460px;
+  text-align: center;
+}
+.pagina-error-icono {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  background-color: rgba(169, 121, 63, 0.14);
+  color: var(--coffee-accent-hover);
+}
+.pagina-error-codigo {
+  font-size: 0.75rem;
+  font-weight: var(--fw-btn);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--coffee-accent);
+}
+.pagina-error-titulo {
+  margin: 0.4rem 0 0.75rem;
+}
+.pagina-error-texto {
+  color: var(--coffee-text-muted);
+  margin-bottom: 1.5rem;
+}
+.login-funciones {
+  list-style: none;
+  padding: 0;
+  margin: 2rem 0 0;
+  max-width: 30rem;
+}
+.login-funciones li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0;
+  color: rgba(255, 255, 255, 0.78);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.login-funciones i {
+  color: var(--coffee-accent);
+  font-size: 1.1rem;
+}
