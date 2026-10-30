@@ -23,7 +23,8 @@ MODELOS_A_REINICIAR = [
 class Command(BaseCommand):
     help = (
         'Llena la base de datos con datos de ejemplo realistas de una cafetería: '
-        'insumos, productos con receta, ventas de los últimos 7 días y mermas.'
+        'insumos, productos con receta, proveedores, compras, ventas de los '
+        'últimos 7 días y mermas.'
     )
 
     def add_arguments(self, parser):
@@ -61,11 +62,14 @@ class Command(BaseCommand):
             productos = self._crear_productos()
             self._crear_recetas(productos, insumos)
             usuarios = self._obtener_usuarios()
+            proveedores = self._crear_proveedores()
+            self._crear_compras(insumos, proveedores, usuarios)
             self._crear_ventas(productos, usuarios)
             self._crear_mermas(insumos, usuarios)
 
         self.stdout.write(self.style.SUCCESS(
             f'Datos de ejemplo creados: {len(insumos)} insumos, {len(productos)} productos, '
+            f'{len(proveedores)} proveedores, {Compra.objects.count()} compras, '
             f'{Venta.objects.count()} ventas, {Merma.objects.count()} mermas.'
         ))
 
@@ -209,6 +213,66 @@ class Command(BaseCommand):
         return usuarios
 
     # ------------------------------------------------------------------
+    # Proveedores y compras
+    # ------------------------------------------------------------------
+
+    def _crear_proveedores(self):
+        datos = [
+            ('Beneficio Las Nubes', 'Marta Rivas', '2250-1100', 'ventas@lasnubes.example'),
+            ('Lácteos del Valle', 'José Hernández', '2260-2200', 'pedidos@lacteosdelvalle.example'),
+            ('Distribuidora La Despensa', 'Ana Martínez', '2270-3300', ''),
+            ('Empaques Centroamérica', 'Luis Pineda', '2280-4400', 'info@empaquesca.example'),
+        ]
+        proveedores = {}
+        for nombre, contacto, telefono, correo in datos:
+            proveedor, _ = Proveedor.objects.update_or_create(
+                nombre=nombre,
+                defaults=dict(contacto=contacto, telefono=telefono, correo=correo, activo=True),
+            )
+            proveedores[nombre] = proveedor
+        return proveedores
+
+    def _crear_compras(self, insumos, proveedores, usuarios):
+        """Historial de compras de las últimas dos semanas.
+
+        Es solo historial: el stock inicial de los insumos ya las incluye, así
+        que no se vuelve a sumar. Se usa el costo actual de cada insumo para
+        que el costo promedio no cambie.
+        """
+        responsable = next((u for u in usuarios if u.username == 'admin_coffeestock'), usuarios[0])
+        ahora = timezone.now()
+        compras = [
+            (13, 'Beneficio Las Nubes', 'F-1045', [
+                ('Café en grano arábica', 5000), ('Café en grano robusta', 2000)]),
+            (12, 'Lácteos del Valle', 'LV-2210', [
+                ('Leche entera', 12000), ('Leche de almendra', 4000), ('Mantequilla', 2000)]),
+            (10, 'Distribuidora La Despensa', 'D-778', [
+                ('Harina de trigo', 5000), ('Azúcar', 5000), ('Chocolate en polvo', 2000),
+                ('Sirope de vainilla', 1000), ('Huevo', 60)]),
+            (9, 'Empaques Centroamérica', 'EC-5521', [('Vaso para llevar 12 oz', 500)]),
+            (5, 'Lácteos del Valle', 'LV-2287', [('Leche entera', 6000)]),
+            (2, 'Distribuidora La Despensa', '', [('Azúcar', 2000), ('Huevo', 30)]),
+        ]
+        for dias, nombre_proveedor, factura, lineas in compras:
+            fecha = (ahora - datetime.timedelta(days=dias)).replace(hour=14, minute=30)
+            compra = Compra.objects.create(
+                proveedor=proveedores[nombre_proveedor],
+                usuario=responsable,
+                fecha=fecha,
+                numero_factura=factura,
+            )
+            total = Decimal('0')
+            for nombre_insumo, cantidad in lineas:
+                insumo = insumos[nombre_insumo]
+                subtotal = (insumo.costo_unitario * cantidad).quantize(Decimal('0.01'))
+                DetalleCompra.objects.create(
+                    compra=compra, insumo=insumo, cantidad=Decimal(cantidad),
+                    costo_unitario=insumo.costo_unitario, subtotal=subtotal,
+                )
+                total += subtotal
+            Compra.objects.filter(pk=compra.pk).update(total=total, fecha_registro=fecha)
+
+    # ------------------------------------------------------------------
     # Ventas (últimos 7 días)
     # ------------------------------------------------------------------
 
@@ -255,6 +319,19 @@ class Command(BaseCommand):
 
             Venta.objects.filter(pk=venta.pk).update(
                 total=total, fecha=momento, metodo_pago=metodo, monto_recibido=recibido,
+            )
+
+        # Una venta anulada, para mostrar cómo se ve en el listado y el corte.
+        anulada = Venta.objects.order_by('fecha').first()
+        if anulada is not None:
+            administrador = next(
+                (u for u in usuarios if u.username == 'admin_coffeestock'), usuarios[0]
+            )
+            Venta.objects.filter(pk=anulada.pk).update(
+                estado=Venta.Estado.ANULADA,
+                anulada_por=administrador,
+                fecha_anulacion=anulada.fecha + datetime.timedelta(minutes=5),
+                motivo_anulacion='El cliente cambió su pedido.',
             )
 
     # ------------------------------------------------------------------
