@@ -153,14 +153,16 @@ def enviar_correo(asunto, cuerpo, destinatarios=None):
     return True, 'El servidor SMTP aceptó el correo.'
 
 
-def enviar_alerta_stock(insumo):
+def enviar_alerta_stock(insumo, forzar=False):
     """Envía la alerta de stock bajo de `insumo`.
 
-    No reenvía si ya se notificó este insumo en las últimas 24 horas.
+    No reenvía si ya se notificó este insumo en las últimas 24 horas, salvo
+    con `forzar` (lo usa el diagnóstico de probar_correo).
     Devuelve True solo si el correo salió.
     """
     if (
-        insumo.ultima_alerta_enviada
+        not forzar
+        and insumo.ultima_alerta_enviada
         and timezone.now() - insumo.ultima_alerta_enviada < ALERTA_STOCK_COOLDOWN
     ):
         logger.info('Alerta de "%s" omitida: ya se envió una en las últimas 24 h.', insumo.nombre)

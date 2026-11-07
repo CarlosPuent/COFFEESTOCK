@@ -1,7 +1,13 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from core.services.alertas import enviar_correo, estado_configuracion
+from django.db.models import F
+from django.utils import timezone
+
+from core.models import Insumo
+from core.services.alertas import (
+    ALERTA_STOCK_COOLDOWN, enviar_alerta_stock, enviar_correo, estado_configuracion,
+)
 
 
 class Command(BaseCommand):
@@ -14,6 +20,12 @@ class Command(BaseCommand):
         parser.add_argument(
             '--para',
             help='Correo(s) destino separados por coma. Por defecto usa ALERTA_EMAIL_DESTINATARIOS.',
+        )
+        parser.add_argument(
+            '--alerta',
+            action='store_true',
+            help='En vez del correo de prueba, muestra el estado de las alertas de cada '
+                 'insumo bajo el mínimo y envía la alerta real del primero.',
         )
 
     def handle(self, *args, **options):
@@ -51,6 +63,10 @@ class Command(BaseCommand):
             ))
             self.stdout.write('')
 
+        if options['alerta']:
+            self._probar_alerta()
+            return
+
         ok, detalle = enviar_correo(
             '[CoffeeStock] Correo de prueba',
             'Si estás leyendo esto, las alertas de stock bajo de CoffeeStock '
@@ -67,3 +83,36 @@ class Command(BaseCommand):
                 'Revisa la bandeja de entrada y también Spam / Promociones. '
                 'El primer correo puede tardar uno o dos minutos.'
             )
+
+    def _probar_alerta(self):
+        bajos = list(Insumo.objects.filter(activo=True, stock_actual__lte=F('stock_minimo')).order_by('nombre'))
+        if not bajos:
+            raise CommandError(
+                'Ningún insumo está en o bajo su mínimo, así que no hay alerta que enviar. '
+                'Registra una merma o corre "python manage.py seed_demo_data --reset".'
+            )
+
+        ahora = timezone.now()
+        self.stdout.write('Insumos en o bajo el mínimo:')
+        for insumo in bajos:
+            if insumo.ultima_alerta_enviada is None:
+                estado = 'nunca se ha avisado'
+            elif ahora - insumo.ultima_alerta_enviada < ALERTA_STOCK_COOLDOWN:
+                hora = timezone.localtime(insumo.ultima_alerta_enviada).strftime('%d/%m/%Y %H:%M')
+                estado = f'ya se avisó el {hora}: no se repite hasta 24 h después'
+            else:
+                estado = 'se puede avisar de nuevo'
+            self.stdout.write(f'  - {insumo.nombre}: {insumo.stock_actual} de {insumo.stock_minimo} mínimo ({estado})')
+        self.stdout.write('')
+
+        insumo = bajos[0]
+        self.stdout.write(f'Enviando la alerta real de "{insumo.nombre}" (sin esperar las 24 h)...')
+        if not enviar_alerta_stock(insumo, forzar=True):
+            raise CommandError(
+                'La alerta no salió. El motivo aparece arriba en la línea '
+                '"No se pudo enviar la alerta de stock".'
+            )
+        self.stdout.write(self.style.SUCCESS(
+            f'Alerta enviada con el asunto "[CoffeeStock] Stock bajo: {insumo.nombre}". '
+            'Búscala en la bandeja de entrada y en Spam / Correo no deseado.'
+        ))

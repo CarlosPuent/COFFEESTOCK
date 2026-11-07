@@ -360,3 +360,20 @@ class AlertaEnSegundoPlanoTests(TestCase):
                 programar_alerta_stock(insumo.pk)
         hilo.assert_called_once()
         hilo.return_value.start.assert_called_once()
+
+
+@override_settings(**CONSOLA)
+class ProbarAlertaComandoTests(TestCase):
+    def test_envia_la_alerta_aunque_ya_se_haya_avisado(self):
+        from io import StringIO
+
+        from django.core import mail
+        from django.core.management import call_command
+        from django.utils import timezone
+
+        crear_insumo(stock_actual=Decimal('100'), ultima_alerta_enviada=timezone.now())
+        salida = StringIO()
+        call_command('probar_correo', '--alerta', stdout=salida)
+        self.assertIn('ya se avisó', salida.getvalue())
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Stock bajo: Leche', mail.outbox[0].subject)

@@ -666,6 +666,7 @@ Si dice que no existe, no pasa nada. Ahora sigue desde el
 | `seed_demo_data` pregunta `¿Deseas continuar?` | Ya había datos. Escribe `n` y usa `python manage.py seed_demo_data --reset`. |
 | Cambié el `.env` y no pasa nada | Guarda con Ctrl + S, apaga con Ctrl + C y vuelve a correr `python manage.py runserver`. |
 | No llega el correo | `python manage.py probar_correo` y lee el mensaje (paso 11). Revisa Spam. Recuerda el límite de 24 h por insumo. |
+| Llega el correo de prueba pero no la alerta | `python manage.py probar_correo --alerta`: muestra qué insumos están bajo el mínimo, si ya se avisó en las últimas 24 h, y envía la alerta real. Si cambiaste el `.env`, apaga (Ctrl + C) y vuelve a correr `runserver`. |
 | El dashboard muestra un aviso amarillo de correo | Falta un dato del correo en el `.env`; el aviso dice cuál. |
 
 ---
